@@ -1,0 +1,36 @@
+Info: Server was initialized! FILE:server/server.c LINE:45
+Info: Checking new client FILE:server/server.c LINE:85
+Info: Adding ID to fd 2 FILE:ID/ID.c LINE:12
+Info: ID set 0 FILE:ID/ID.c LINE:31
+Info: Created new client: 0 FILE:server/server.c LINE:119
+Info: Checking new client FILE:server/server.c LINE:85
+Info: Writting message to slave FILE:bash LINE:1613590532
+Info: Got 2 fd from 0 ID FILE:ID/ID.c LINE:54
+Info: Checking new client FILE:server/server.c LINE:85
+Info: Writting message to slave FILE:ls LINE:1613590532
+Info: Got 2 fd from 0 ID FILE:ID/ID.c LINE:54
+Info: Checking new client FILE:server/server.c LINE:85
+Info: Writting message to slave FILE:ps -auxw LINE:1613590532
+Info: Got 2 fd from 0 ID FILE:ID/ID.c LINE:54
+Info: Checking new client FILE:server/server.c LINE:85
+Info: Adding ID to fd 5 FILE:ID/ID.c LINE:12
+Info: ID set 1 FILE:ID/ID.c LINE:31
+Info: Created new client: 1 FILE:server/server.c LINE:119
+Info: Checking new client FILE:server/server.c LINE:85
+Info: Writting message to slave FILE:bash LINE:1613590532
+Info: Got 5 fd from 1 ID FILE:ID/ID.c LINE:54
+Info: Checking new client FILE:server/server.c LINE:85
+Info: Writting message to slave FILE:ls LINE:1613590532
+Info: Got 5 fd from 1 ID FILE:ID/ID.c LINE:54
+Info: Checking new client FILE:server/server.c LINE:85
+Info: Writting message to slave FILE:ps -a LINE:1613590532
+Info: Got 5 fd from 1 ID FILE:ID/ID.c LINE:54
+Info: Checking new client FILE:server/server.c LINE:85
+Info: Writting message to slave FILE:ps -au LINE:1613590532
+Info: Got 5 fd from 1 ID FILE:ID/ID.c LINE:54
+Info: Checking new client FILE:server/server.c LINE:85
+Info: Writting message to slave FILE:ps -aux LINE:1613590532
+Info: Got 5 fd from 1 ID FILE:ID/ID.c LINE:54
+Info: Exit programm FILE:server/server.c LINE:78
+Info: Closing IDs FILE:ID/ID.c LINE:60
+Info: Unlinked! FILE:server/server.c LINE:162
