@@ -6,23 +6,28 @@
 #define SMALL_BUFF 64
 #define wait_ms 1000
 
-int create_bash ();
-int check_bash (int fd);
+static int CheckArgs (int argc , char* argv []);
+static int StartSlave ();
 
-int check_buffer (char* buffer);
-int print_cur_dir ();
-int send_message (char* str);
-int do_ls ();
+static int create_bash ();
+static int GetResFd (int fd , struct termios* flags);
+static int check_bash (int fd);
+
+static int check_buffer (char* buffer);
+static int print_cur_dir ();
+static int send_message (char* str);
+static int do_ls ();
 
 //dynamic output
-char* write_into_bash (int fd , M_pack_unnamed* pack , struct pollfd* pollfds);
+static char* write_into_bash (int fd , M_pack_unnamed* pack , struct pollfd* pollfds);
 
-int SetLogFileID (char* ID);
+static int SetLogFileID (char* ID);
 
 static int pipe_rd = 0;
 static int my_socket = 0;
-struct sockaddr* name = NULL;
-char* ID = NULL;
+static int port = 0;
+static struct sockaddr* name = NULL;
+static char* ID = NULL;
 
 /* argv:
 [1] - pipe_reading
@@ -34,20 +39,9 @@ char* ID = NULL;
 
 int main (int argc , char* argv [])
 {
-    if (SetLogFileID (argv[5]) == -1)
+    if (CheckArgs (argc , argv) == -1)
         return -1;
 
-    pr_info ("Starting logging!");
-
-    if (argc != 6)
-    {
-        pr_err ("Not enough parameters: %d. Must be 6" , argc);
-        return 0;
-    }
-
-    pipe_rd = atoi (argv[1]);
-    my_socket = atoi (argv[2]);
-    int port = atoi (argv[3]);
     struct in_addr addr = { atoi (argv[4]) };
     struct sockaddr_in sock_addr = { AF_INET, port, addr, 0 };
     name = (struct sockaddr*)(&sock_addr);
@@ -56,42 +50,68 @@ int main (int argc , char* argv [])
         return -1;
 
     pr_info ("Server slave was initialized");
+    StartSlave ();
 
+    pr_info ("Exit programm server_slave");
+    close (pipe_rd);
+    return 0;
+}
+
+int CheckArgs (int argc , char* argv [])
+{
+    if (SetLogFileID (argv[5]) == -1)
+        return -1;
+
+    pr_info ("Starting logging!");
+
+    if (argc != 6)
+    {
+        pr_err ("Not enough parameters: %d. Must be 6" , argc);
+        return -1;
+    }
+
+    pipe_rd = atoi (argv[1]);
+    my_socket = atoi (argv[2]);
+    port = atoi (argv[3]);
+    return 0;
+}
+
+static int StartSlave ()
+{
     while (1)
     {
         M_pack_unnamed* pack = M_ReadPack_Unnamed (pipe_rd);
         if (pack == NULL)
-            goto exit_programm;
+            return -1;
 
         if (strcmp (pack->data_ , "CLOSE_SERVER") == CMP_EQ)
         {
             M_DestroyPack_Unnamed (pack);
-            goto exit_programm;
+            return 0;
         }
 
         if (strcmp (pack->data_ , "bash") == CMP_EQ)
         {
             M_DestroyPack_Unnamed (pack);
-            create_bash ();
-            goto exit_programm;
+            return create_bash ();
         }
 
         if (check_buffer (pack->data_) == -1)
-            goto exit_programm;
+        {
+            M_DestroyPack_Unnamed (pack);
+            return -1;
+        }
 
         M_DestroyPack_Unnamed (pack);
     }
 
-exit_programm:
-    pr_info ("Exit programm server_slave")
-        close (pipe_rd);
     return 0;
 }
 
 int SetLogFileID (char* ID)
 {
     char buf[100] = {};
-    if (sprintf (buf , "/home/mark/VS_prog/HW4/Socket/slave%s.log" , ID) == -1)
+    if (sprintf (buf , "/home/mark/VS_prog/2nd_grade/C_4_Sockets/slave%s.log" , ID) == -1)
     {
         pr_strerr ("Can't create name of log file slave%s" , ID);
         return -1;
@@ -116,6 +136,41 @@ int create_bash ()
         return -1;
     }
 
+    struct termios term;
+    term.c_lflag = 0;
+    int resfd = GetResFd (fd , &term);
+    if (resfd == -1)
+        return -1;
+
+    if (fork () == 0)
+    {
+        if (dup2 (resfd , STDIN_FILENO) == -1
+         || dup2 (resfd , STDOUT_FILENO) == -1
+         || dup2 (resfd , STDERR_FILENO) == -1)
+        {
+            pr_strerr ("dup problem with %d fd" , resfd);
+            return -1;
+        }
+
+        close (fd);
+        if (execlp ("/bin/bash" , "/bin/bash" , NULL) == -1)
+        {
+            pr_strerr ("exec bash problem!");
+            return -1;
+        }
+        exit (1);
+    }
+
+    pr_info ("Created bash of server slave");
+
+    int ret = check_bash (fd);
+    close (fd);
+    close (resfd);
+    return ret;
+}
+
+int GetResFd (int fd , struct termios* flags)
+{
     if (grantpt (fd) == -1)
     {
         pr_strerr ("Can't grantpt bash of %d" , fd);
@@ -143,59 +198,31 @@ int create_bash ()
     }
 
     //delete ECHO flag
-    struct termios term;
-    term.c_lflag = 0;
-    if (tcsetattr (resfd , 0 , &term) == -1)
+    if (tcsetattr (resfd , 0 , flags) == -1)
     {
         pr_strerr ("Can't set tc_attr in %d fd" , resfd);
         return -1;
     }
 
-    if (fork () == 0)
-    {
-        if (dup2 (resfd , STDIN_FILENO) == -1
-         || dup2 (resfd , STDOUT_FILENO) == -1
-         || dup2 (resfd , STDERR_FILENO) == -1)
-        {
-            pr_strerr ("dup problem with %d fd" , resfd);
-            return -1;
-        }
-
-        close (fd);
-        if (execlp ("/bin/bash" , "/bin/bash" , NULL) == -1)
-        {
-            pr_strerr ("exec bash problem!");
-            return -1;
-        }
-    }
-
-    pr_info ("Created bash of server slave");
-    if (send_message ("Bash was started!\n") == -1)
-        return -1;
-
-    check_bash (fd);
-    close (fd);
-    close (resfd);
-    return 0;
+    return resfd;
 }
 
+
+static int print_first_com (int fd , struct pollfd* poll);
 int check_bash (int fd)
 {
     pr_info ("Checking bash");
+    if (send_message ("Bash was started!\n") == -1)
+        return -1;
+
     struct pollfd pollfds;
     pollfds.fd = fd;
     pollfds.events = POLLIN;
 
-    M_pack_unnamed* packet = M_CreatePack_Unnamed ("ls" , 2);
-    if (packet == NULL)
+    if (print_first_com (fd , &pollfds) == -1)
         return -1;
 
-    char* buf_out = write_into_bash (fd , packet , &pollfds);
-    if (buf_out == NULL)
-        return -1;
-
-    M_DestroyPack_Unnamed (packet);
-
+    pr_info ("Main checking bash is started!");
     while (1)
     {
         M_pack_unnamed* pack = M_ReadPack_Unnamed (pipe_rd);
@@ -217,7 +244,7 @@ int check_bash (int fd)
         }
 
         M_DestroyPack_Unnamed (pack);
-        pr_info ("SENDING: %s", buf);
+        pr_info ("SENDING: %s" , buf);
         if (send_message (buf) == -1)
             return -1;
     }
@@ -225,6 +252,21 @@ int check_bash (int fd)
     return 0;
 }
 
+int print_first_com (int fd , struct pollfd* poll)
+{
+    M_pack_unnamed* pack = M_CreatePack_Unnamed ("\n" , 1);
+    if (pack == NULL)
+        return -1;
+
+    char* buf = write_into_bash (fd , pack , poll);
+    if (buf == NULL)
+        return -1;
+
+    M_DestroyPack_Unnamed (pack);
+    return 0;
+}
+
+static int do_cd (char* buffer);
 int check_buffer (char* buffer)
 {
     pr_info ("Checking buffer: %s" , buffer);
@@ -236,28 +278,11 @@ int check_buffer (char* buffer)
         if (buffer[1] == 'd')
         {
             n_found = 0;
-            int err = 0;
-
-            if (buffer[2] == ' ')
-                err = chdir (buffer + 3);
-            else if (buffer[2] == '\0')
-                err == chdir ("/");
-            else
-                err = SOCK_ERR;
-
-            if (err == SOCK_ERR)
-            {
-                if (send_message ("Can't do this with directories!\n") == -1)
-                    return -1;
-                break;
-            }
-
-            if (print_cur_dir () == -1)
+            if (do_cd (buffer + 2) == -1)
                 return -1;
-            break;
         }
-
         break;
+
     case 'l':
         if (strcmp (buffer , "ls") == CMP_EQ)
         {
@@ -266,6 +291,7 @@ int check_buffer (char* buffer)
                 return -1;
         }
         break;
+
     case 'p':
         n_found = strcmp (buffer , "print");
         if (n_found == 0)
@@ -282,11 +308,35 @@ int check_buffer (char* buffer)
 
     return 0;
 }
+int do_cd (char* buffer)
+{
+    int err = 0;
+
+    if (buffer[0] == ' ')
+        err = chdir (buffer + 1);
+    else if (buffer[0] == '\0')
+        err == chdir ("/");
+    else
+        err = SOCK_ERR;
+
+    if (err == SOCK_ERR)
+    {
+        if (send_message ("Can't do this with directories!\n") == -1)
+            return -1;
+        return 0;
+    }
+
+    if (print_cur_dir () == -1)
+        return -1;
+
+    return 0;
+}
+
 
 int print_cur_dir ()
 {
-    char buffer[SMALL_BUFF] = { 0 };
-    if (getcwd (buffer , SMALL_BUFF) == NULL)
+    char buffer[64] = "DIRECTORY: ";
+    if (getcwd (buffer + 11, 51) == NULL)
     {
         if (send_message ("nothing...\n\0") == -1)
             return -1;
@@ -300,12 +350,15 @@ int print_cur_dir ()
     return 0;
 }
 
+static int cat_strings (int pipes[2] , char* big , char* small , char* dir);
 int do_ls ()
 {
     pr_info ("Doing ls");
 
-    char buffer1[BUFSZ];
-    if (getcwd (buffer1 , BUFSZ) == NULL)
+    char Dir_buffer[1024] = "DIRECTORY: ";
+    char buffer1[64] = {};
+
+    if (getcwd (buffer1 , 64) == NULL)
     {
         pr_strerr ("Can't define buffer for directory!\n");
         return -1;
@@ -335,30 +388,40 @@ int do_ls ()
     }
 
     waitpid (pd , NULL , 0);
-    if (write (new_pipe[1] , "\0" , 1) == WRITE_ERR)
+    char buffer[924] = {};
+
+    if (cat_strings (new_pipe , Dir_buffer , buffer1 , buffer) == -1)
+        return -1;
+
+    pr_info ("Ls was done");
+    return 0;
+}
+
+int cat_strings (int pipes[2] , char* big , char* small , char* dir)
+{
+    if (write (pipes[1] , "\0" , 1) == WRITE_ERR)
     {
-        pr_strerr ("Can't write into pipe %d" , new_pipe[1]);
+        pr_strerr ("Can't write into pipe %d" , pipes[1]);
         return -1;
     }
 
-    char buffer[BUFSZ];
-    if (read (new_pipe[0] , buffer , BUFSZ) == READ_ERR)
+    if (read (pipes[0] , dir , 924) == READ_ERR)
     {
-        pr_strerr ("Can't read from pipe %d" , new_pipe[1]);
+        pr_strerr ("Can't read from pipe %d" , pipes[1]);
         return -1;
     }
     else
     {
-        strcat (buffer1 , "\n");
-        strcat (buffer , "\0");
-        strcat (buffer1 , buffer);
-        if (send_message (buffer1) == -1)
+        strcat (big , small);
+        strcat (big , "\n");
+        strcat (dir , "\0");
+        strcat (big , dir);
+        if (send_message (big) == -1)
             return -1;
     }
 
-    close (new_pipe[0]);
-    close (new_pipe[1]);
-    pr_info ("Ls was done");
+    close (pipes[0]);
+    close (pipes[1]);
     return 0;
 }
 

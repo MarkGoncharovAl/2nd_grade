@@ -1,36 +1,123 @@
-Info: Server was initialized! FILE:server/server.c LINE:45
-Info: Checking new client FILE:server/server.c LINE:85
+Info: Server was initialized! FILE:server/server.c LINE:44
+Info: Getting info from socket 0 FILE:packet/packet.c LINE:233
+Info: Received:
+	GETID
+	In 5 bytes from -1 FILE:packet/packet.c LINE:271
+Info: Readed: GETID FILE:server/server.c LINE:61
+Info: Checking new client FILE:server/server.c LINE:88
 Info: Adding ID to fd 2 FILE:ID/ID.c LINE:12
 Info: ID set 0 FILE:ID/ID.c LINE:31
-Info: Created new client: 0 FILE:server/server.c LINE:119
-Info: Checking new client FILE:server/server.c LINE:85
-Info: Writting message to slave FILE:bash LINE:1613590532
+Info: Created new client: 0 FILE:server/server.c LINE:122
+Info: Destroyng named pack for
+	GETID
+	In 5 bytes FILE:packet/packet.c LINE:131
+Info: Getting info from socket 0 FILE:packet/packet.c LINE:233
+Info: Received:
+	bash
+	In 5 bytes from 0 FILE:packet/packet.c LINE:271
+Info: Readed: bash FILE:server/server.c LINE:61
+Info: Checking new client FILE:server/server.c LINE:88
+Info: Recovering pack for
+	bash
+	In 5 bytes FILE:packet/packet.c LINE:148
+Info: Writting message to slave: bash FILE:server/server.c LINE:148
 Info: Got 2 fd from 0 ID FILE:ID/ID.c LINE:54
-Info: Checking new client FILE:server/server.c LINE:85
-Info: Writting message to slave FILE:ls LINE:1613590532
+Info: Writting to buffer 2 info bash FILE:packet/packet.c LINE:204
+Info: Successfully writted FILE:packet/packet.c LINE:225
+Info: Destroyng named pack for
+	bash
+	In 5 bytes FILE:packet/packet.c LINE:131
+Info: Getting info from socket 0 FILE:packet/packet.c LINE:233
+Info: Received:
+	ps -a
+	In 6 bytes from 0 FILE:packet/packet.c LINE:271
+Info: Readed: ps -a FILE:server/server.c LINE:61
+Info: Checking new client FILE:server/server.c LINE:88
+Info: Recovering pack for
+	ps -a
+	In 6 bytes FILE:packet/packet.c LINE:148
+Info: Writting message to slave: ps -a FILE:server/server.c LINE:148
 Info: Got 2 fd from 0 ID FILE:ID/ID.c LINE:54
-Info: Checking new client FILE:server/server.c LINE:85
-Info: Writting message to slave FILE:ps -auxw LINE:1613590532
+Info: Writting to buffer 2 info ps -a FILE:packet/packet.c LINE:204
+Info: Successfully writted FILE:packet/packet.c LINE:225
+Info: Destroyng named pack for
+	ps -a
+	In 6 bytes FILE:packet/packet.c LINE:131
+Info: Getting info from socket 0 FILE:packet/packet.c LINE:233
+Info: Received:
+	ps -au
+	In 7 bytes from 0 FILE:packet/packet.c LINE:271
+Info: Readed: ps -au FILE:server/server.c LINE:61
+Info: Checking new client FILE:server/server.c LINE:88
+Info: Recovering pack for
+	ps -au
+	In 7 bytes FILE:packet/packet.c LINE:148
+Info: Writting message to slave: ps -au FILE:server/server.c LINE:148
 Info: Got 2 fd from 0 ID FILE:ID/ID.c LINE:54
-Info: Checking new client FILE:server/server.c LINE:85
-Info: Adding ID to fd 5 FILE:ID/ID.c LINE:12
-Info: ID set 1 FILE:ID/ID.c LINE:31
-Info: Created new client: 1 FILE:server/server.c LINE:119
-Info: Checking new client FILE:server/server.c LINE:85
-Info: Writting message to slave FILE:bash LINE:1613590532
-Info: Got 5 fd from 1 ID FILE:ID/ID.c LINE:54
-Info: Checking new client FILE:server/server.c LINE:85
-Info: Writting message to slave FILE:ls LINE:1613590532
-Info: Got 5 fd from 1 ID FILE:ID/ID.c LINE:54
-Info: Checking new client FILE:server/server.c LINE:85
-Info: Writting message to slave FILE:ps -a LINE:1613590532
-Info: Got 5 fd from 1 ID FILE:ID/ID.c LINE:54
-Info: Checking new client FILE:server/server.c LINE:85
-Info: Writting message to slave FILE:ps -au LINE:1613590532
-Info: Got 5 fd from 1 ID FILE:ID/ID.c LINE:54
-Info: Checking new client FILE:server/server.c LINE:85
-Info: Writting message to slave FILE:ps -aux LINE:1613590532
-Info: Got 5 fd from 1 ID FILE:ID/ID.c LINE:54
-Info: Exit programm FILE:server/server.c LINE:78
+Info: Writting to buffer 2 info ps -au FILE:packet/packet.c LINE:204
+Info: Successfully writted FILE:packet/packet.c LINE:225
+Info: Destroyng named pack for
+	ps -au
+	In 7 bytes FILE:packet/packet.c LINE:131
+Info: Getting info from socket 0 FILE:packet/packet.c LINE:233
+Info: Received:
+	ls
+	In 3 bytes from 0 FILE:packet/packet.c LINE:271
+Info: Readed: ls FILE:server/server.c LINE:61
+Info: Checking new client FILE:server/server.c LINE:88
+Info: Recovering pack for
+	ls
+	In 3 bytes FILE:packet/packet.c LINE:148
+Info: Writting message to slave: ls FILE:server/server.c LINE:148
+Info: Got 2 fd from 0 ID FILE:ID/ID.c LINE:54
+Info: Writting to buffer 2 info ls FILE:packet/packet.c LINE:204
+Info: Successfully writted FILE:packet/packet.c LINE:225
+Info: Destroyng named pack for
+	ls
+	In 3 bytes FILE:packet/packet.c LINE:131
+Info: Getting info from socket 0 FILE:packet/packet.c LINE:233
+Info: Received:
+	ps -auw
+	In 8 bytes from 0 FILE:packet/packet.c LINE:271
+Info: Readed: ps -auw FILE:server/server.c LINE:61
+Info: Checking new client FILE:server/server.c LINE:88
+Info: Recovering pack for
+	ps -auw
+	In 8 bytes FILE:packet/packet.c LINE:148
+Info: Writting message to slave: ps -auw FILE:server/server.c LINE:148
+Info: Got 2 fd from 0 ID FILE:ID/ID.c LINE:54
+Info: Writting to buffer 2 info ps -auw FILE:packet/packet.c LINE:204
+Info: Successfully writted FILE:packet/packet.c LINE:225
+Info: Destroyng named pack for
+	ps -auw
+	In 8 bytes FILE:packet/packet.c LINE:131
+Info: Getting info from socket 0 FILE:packet/packet.c LINE:233
+Info: Received:
+	ps -auxw
+	In 9 bytes from 0 FILE:packet/packet.c LINE:271
+Info: Readed: ps -auxw FILE:server/server.c LINE:61
+Info: Checking new client FILE:server/server.c LINE:88
+Info: Recovering pack for
+	ps -auxw
+	In 9 bytes FILE:packet/packet.c LINE:148
+Info: Writting message to slave: ps -auxw FILE:server/server.c LINE:148
+Info: Got 2 fd from 0 ID FILE:ID/ID.c LINE:54
+Info: Writting to buffer 2 info ps -auxw FILE:packet/packet.c LINE:204
+Info: Successfully writted FILE:packet/packet.c LINE:225
+Info: Destroyng named pack for
+	ps -auxw
+	In 9 bytes FILE:packet/packet.c LINE:131
+Info: Getting info from socket 0 FILE:packet/packet.c LINE:233
+Info: Received:
+	CLOSE_SERVER
+	In 12 bytes from -1 FILE:packet/packet.c LINE:271
+Info: Readed: CLOSE_SERVER FILE:server/server.c LINE:61
+Info: Exit programm FILE:server/server.c LINE:47
 Info: Closing IDs FILE:ID/ID.c LINE:60
-Info: Unlinked! FILE:server/server.c LINE:162
+Info: Creating un_named pack_mem for
+	CLOSE_SERVER
+	In 12 bytes FILE:packet/packet.c LINE:97
+Info: Un_named_pack_mem successfully created! FILE:packet/packet.c LINE:111
+Info: Writting to buffer 2 info CLOSE_SERVER FILE:packet/packet.c LINE:204
+Info: Successfully writted FILE:packet/packet.c LINE:225
+Info: Unlinked! FILE:server/server.c LINE:165

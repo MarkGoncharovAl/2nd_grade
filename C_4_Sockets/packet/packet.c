@@ -256,7 +256,7 @@ M_pack_named* M_ReadPack_Named (int fd , struct sockaddr* addr)
     out->data_ = (char*)malloc (out->size_ * sizeof (char));
     if (out->data_ == NULL)
     {
-        pr_strerr ("Can't get dynamic memory for info in pack!");
+        pr_strerr ("Can't get dynamic memory for info in pack: size: %u from socket %d!", out->size_, out->name_);
         free (out);
         return NULL;
     }
@@ -268,7 +268,7 @@ M_pack_named* M_ReadPack_Named (int fd , struct sockaddr* addr)
     }
 
 #ifdef MAX_INFO
-    pr_info ("Received:\n\t%s\n\tIn %u bytes" , out->data_ , out->size_);
+    pr_info ("Received:\n\t%s\n\tIn %u bytes from %d" , out->data_ , out->size_, out->name_);
 #endif
     return out;
 }
@@ -282,7 +282,7 @@ int M_WritePack_Named (int fd , struct sockaddr* addr , M_pack_named* pack)
     }
 
 #ifdef MAX_INFO
-    pr_info ("Writting:\n\t%s\n\t%d bytes to %d socket" , pack->data_ , pack->size_ , fd);
+    pr_info ("Writting:\n\t%s\n\t%u bytes to %d socket" , pack->data_ , pack->size_ , fd);
 #endif
 
     socklen_t sock_len = sizeof (struct sockaddr_in);

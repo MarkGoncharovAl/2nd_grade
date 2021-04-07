@@ -4,11 +4,12 @@
 #include "../ID/ID.h"
 
 #define NEW_CLIENT -1
-static const char LOG_FILE [] = "/home/mark/VS_prog/HW4/Socket/server.log";
+static const char LOG_FILE [] = "/home/mark/VS_prog/2nd_grade/C_4_Sockets/server.log";
 
 //return 0 if success
 int WriteMessage (int ID , M_pack_unnamed* pack);
 int init_daemon ();
+int StartServer (int sk , struct sockaddr_in* name, struct sockaddr* name_);
 
 //-1 - Error was occured
 // 0 - Client was already signed
@@ -31,11 +32,9 @@ int main ()
 
     struct in_addr in_ad = { inet_addr (INET) };
     struct sockaddr_in name = { AF_INET, PORT, in_ad, 0 };
-
     struct sockaddr* name_ = (struct sockaddr*)&name;
-    socklen_t sock_len = sizeof (struct sockaddr_in);
 
-    if (bind (sk , name_ , sock_len) == SOCK_ERR)
+    if (bind (sk , name_ , sizeof (struct sockaddr_in)) == SOCK_ERR)
     {
         pr_err ("Unable to bind socket!");
         close (sk);
@@ -43,41 +42,45 @@ int main ()
     }
 
     pr_info ("Server was initialized!");
+    StartServer (sk , &name, name_);
+
+    pr_info ("Exit programm");
+    Close (sk);
+    return 0;
+}
+
+int StartServer (int sk , struct sockaddr_in* name, struct sockaddr* name_)
+{
     while (1)
     {
         M_pack_named* pack = M_ReadPack_Named (sk , name_);
         if (pack == NULL)
-            goto exit_programm;
+            return -1;
 
 #ifdef MAX_INFO
         pr_info ("Readed: %s" , pack->data_);
 #endif
 
         if (strcmp (pack->data_ , "CLOSE_SERVER") == CMP_EQ)
-            goto exit_programm;
+            return 0;
 
-        switch (CheckNewClient (pack , &name , sk))
+        switch (CheckNewClient (pack , name , sk))
         {
         case -1: //error
-            goto exit_programm;
+            return -1;
         case 0: //client was existed
             if (WriteMessage (pack->name_ , M_RecoverPack (pack)) == -1)
-                goto exit_programm;
+                return -1;
             break;
         case 1: //new client
             break;
         default: //not done
             pr_err ("Can't understand mistake!");
-            goto exit_programm;
+            return -1;
         }
 
         M_DestroyPack_Named (pack);
     }
-
-exit_programm:
-    pr_info ("Exit programm");
-    Close (sk);
-    return 0;
 }
 
 char CheckNewClient (M_pack_named* pack , struct sockaddr_in* addr , int sk)
@@ -107,8 +110,8 @@ char CheckNewClient (M_pack_named* pack , struct sockaddr_in* addr , int sk)
 
         if (fork () == 0)
         {//child
-            if (execlp ("/home/mark/VS_prog/HW4/Socket/build/./server_slave.o" ,
-                "/home/mark/VS_prog/HW4/Socket/build/./server_slave.o" ,
+            if (execlp ("/home/mark/VS_prog/2nd_grade/C_4_Sockets/build/./server_slave.o" ,
+                "/home/mark/VS_prog/2nd_grade/C_4_Sockets/build/./server_slave.o" ,
                 out_str[0] , out_str[1] , out_str[2] , out_str[3] , out_str[4] , NULL) == EXEC_ERR)
             {
                 pr_err ("Can't create server_slave!");
@@ -142,7 +145,7 @@ int WriteMessage (int ID , M_pack_unnamed* pack)
         return 0;
     }
 
-    pr_info ("Writting message to slave" , pack->data_);
+    pr_info ("Writting message to slave: %s" , pack->data_);
 
     int fd = M_GetFD_FromID (ID);
     if (fd == -1)
@@ -210,10 +213,7 @@ int init_daemon ()
     if (logfd == -1)
         return -1;
     if (SetLogFile (logfd) == -1)
-    {
-
         return -1;
-    }
 
     close (STDIN_FILENO);
     close (STDOUT_FILENO);

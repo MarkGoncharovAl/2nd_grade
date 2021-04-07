@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-O3 -DINFO
+CFLAGS=-O3 -DINFO -DMAX_INFO
 
 all: server_compile server_slave_compile client_compile control_server_compile
 	@echo "Files were compiled!"
