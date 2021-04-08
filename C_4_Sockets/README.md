@@ -49,17 +49,17 @@ Now we have
 | 13   | 0.5  | Client is reaining                |
 
 1. 08.04
-```cpp
+> ```
 > Start README. Current targets:
 > Optimize return value handling in functions
 > Logging into /var/log
 > Killing server more accurate
-> Rewrite `CheckNewClient` without switch and so on
+> Rewrite CheckNewClient without switch and so on
 > One function-name style must be used
 > Rename functions: GetID, AddID and so on...
-> Close file-descr before `exec`
+> Close file-descr before exec
 > Packet->data_ should be union for convient usage
-> fgets can't be used in order to save from `dup2`
+> fgets can not be used in order to save from dup2
 > Signal handling (can be used tcsetattr/cfmakeraw)
 > Common usage for TCP and UDP
 ```
