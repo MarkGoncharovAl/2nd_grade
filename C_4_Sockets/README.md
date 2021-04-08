@@ -83,7 +83,9 @@ Usage
 
 How it works
 ============
+
 ![Scheme of work](images/1.png)
+
 1. Client is sending request to server in order to get ID (UDP)
 2. Server is searching free ID in ID_base
 3. Returns ID to client and creating slave that will work on this client
