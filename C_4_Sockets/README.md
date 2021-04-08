@@ -30,8 +30,6 @@ Requirements
 
 Versions
 ========
-Now we have
------------
 | Task | Done | Preparing                         |
 | :---:|:----:|:---------------------------------:|
 | 1    | 0.8  | Common usage functions            |
