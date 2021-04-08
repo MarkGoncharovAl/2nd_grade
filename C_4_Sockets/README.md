@@ -49,6 +49,7 @@ Now we have
 | 13   | 0.5  | Client is reaining                |
 
 1. 08.04
+```cpp
 > Start README. Current targets:
 > Optimize return value handling in functions
 > Logging into /var/log
@@ -61,6 +62,7 @@ Now we have
 > fgets can't be used in order to save from `dup2`
 > Signal handling (can be used tcsetattr/cfmakeraw)
 > Common usage for TCP and UDP
+```
 
 Install
 =======
