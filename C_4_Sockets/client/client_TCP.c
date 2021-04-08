@@ -1,91 +1,98 @@
-#include "Com_libs/includes.h"
-#include "Com_libs/const.h"
-#include "packet/packet.h"
+#include "../Com_libs/includes.h"
+#include "../Com_libs/const.h"
+#include "../packet/packet.h"
 
-in_addr_t check_argc (int argc , char* argv);
-int GetID (int sk , struct sockaddr* addr1 , struct sockaddr* addr2);
+static int SetLogFileID ();
+static int StartClient (int sk , struct sockaddr* send);
+
+#define LOGGING_FILE "LOG/clientTCP.log"
 
 int main (int argc , char* argv [])
 {
-    printf (ANSI_COLOR_RED "");
-    struct in_addr in_ad = { check_argc (argc, argv[1]) };
+    if (SetLogFileID () == -1)
+        return -1;
+    pr_info ("Logging is starting");
+
+    struct in_addr in_ad = { inet_addr (INET) };
+    if (in_ad.s_addr == -1)
+        return -1;
 
     int sk = socket (AF_INET , SOCK_STREAM , 0);
-    ERROR_CHECK (sk , SOCK_ERR , "Unable to connect to socket!");
-
-    if (argc == 2 && strcmp (argv[1] , "BROADCAST") == CMP_EQ)
+    if (sk == SOCK_ERR)
     {
-        int yes = 1;
-        ERROR_CHECK (setsockopt (sk , SOL_SOCKET , SO_BROADCAST , &yes , sizeof (yes)) , SOCK_ERR ,
-        "Can't optionalized socket!");
+        pr_strerr ("Unable to connect to socket!");
+        return 1;
     }
 
-    const struct sockaddr_in sending = { AF_INET, PORT_TCP, in_ad, 0 };
+    const struct sockaddr_in sending = { AF_INET, PORT, in_ad, 0 };
     struct sockaddr* sending_ = (struct sockaddr*)&sending;
 
-    // in order to get information
-    ////////////////////////////////////
-    socklen_t sock_len = sizeof (struct sockaddr_in);
-
-    ERROR_CHECK_2 (bind (sk , sending_ , sock_len) , SOCK_ERR ,
-                   "Unable to bind socket!" , close (sk));
-
-    ERROR_CHECK(connect(sk, sending_, sock_len), -1, "Connection failed");
-    ////////////////////////////////////
-
-    char getstr[BUFSZ] = {};
-    while (1)
+    if (connect (sk , sending_ , sizeof (sending)) == -1)
     {
-        ERROR_CHECK (fgets (getstr , BUFSZ , stdin) , NULL , "Unable to getstr!");
-        size_t len = strlen (getstr);
-        getstr[len - 1] = '\0'; //delete last '\n' after fgets
-
-        //printf("%s\n", getstr);
-        M_pack_named* pack = M_CreatePack_Named (getstr , len , 0);
-        M_WritePack_Named (sk , sending_ , pack);
-        M_DestroyPack_Named (pack);
-
-        if (strcmp (getstr , "exit") == 0)
-            break;
-
-        M_pack_named* packet = M_ReadPack_Named (sk , sending_);
-        printf (ANSI_COLOR_YELLOW "%s" ANSI_COLOR_RED , packet->data_);
-        M_DestroyPack_Named (packet);
+        pr_strerr ("Unable to connect to socket!");
+        return 1;
     }
 
+    pr_info ("Client was initialized");
+    StartClient (sk , sending_);
+
+    pr_info ("Unlinking");
     close (sk);
     return 0;
 }
 
-int GetID (int sk , struct sockaddr* addr1 , struct sockaddr* addr2)
+int StartClient (int sk , struct sockaddr* send)
 {
-    char buf [] = "GETID";
-    M_pack_named* pack = M_CreatePack_Named (buf , strlen (buf) , -1);
-    M_WritePack_Named (sk , addr1 , pack);
-    M_DestroyPack_Named (pack);
+    M_pack_named* first_pack = M_ReadPack_Named (sk , send);
+    if (first_pack == NULL)
+        return -1;
+    printf ("%s" , first_pack->data_);
+    M_DestroyPack_Named (first_pack);
 
-    M_pack_named* packet = M_ReadPack_Named (sk , addr2);
-    int out = atoi (packet->data_);
-    printf ("ID of a client: %d\n" , out);
-    M_DestroyPack_Named (packet);
-    return out;
+    char getstr[BUFSZ] = {};
+    while (1)
+    {
+        if (fgets (getstr , BUFSZ , stdin) == NULL)
+        {
+            pr_strerr ("Unable to getstr!");
+            return -1;
+        }
+
+        size_t len = strlen (getstr);
+        getstr[len - 1] = '\0'; //delete last '\n' after fgets
+
+        M_pack_named* pack = M_CreatePack_Named_Mem (getstr , len , 0);
+        if (pack == NULL)
+            return -1;
+
+        pr_info ("Client's message: %s" , getstr);
+        if (M_WritePack_Named (sk , send , pack) == -1)
+            return -1;
+
+        free (pack);
+
+        if (strcmp (getstr , "exit") == CMP_EQ || strcmp (getstr , "CLOSE_SERVER") == CMP_EQ)
+            return 0;
+
+        M_pack_named* packet = M_ReadPack_Named (sk , send);
+        if (pack == NULL)
+            return -1;
+
+        printf ("%s" , packet->data_);
+        M_DestroyPack_Named (packet);
+    }
+    return 0;
 }
 
-in_addr_t check_argc (int argc , char* argv)
+int SetLogFileID ()
 {
-    if (argc == 1)
-        return inet_addr (INET);
-    if (argc == 2)
-    {
-        if (strcmp (argv , "BROADCAST") == CMP_EQ)
-            return 0;
-        else
-        {
-            ERROR ("Should be BROADCAST!\n");
-        }
-    }
-    if (argc > 2)
-        ERROR ("Should be 0 or 1 argument!\n");
+    int logfd = fast_open (LOGGING_FILE);
+    if (logfd == -1)
+        return -1;
 
+    if (SetLogFile (logfd))
+        return -1;
+
+    pr_info ("Log file was sucesfully set");
     return 0;
 }

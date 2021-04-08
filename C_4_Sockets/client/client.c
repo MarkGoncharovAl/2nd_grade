@@ -161,7 +161,7 @@ int SetLogFileID (int ID)
     pr_info ("Setting log file to %d" , ID);
 
     char buf[20] = {};
-    sprintf (buf , "client%d.log" , ID);
+    sprintf (buf , "LOG/client%d.log" , ID);
 
     int logfd = fast_open (buf);
     if (logfd == -1)
@@ -177,7 +177,7 @@ int SetLogFileID (int ID)
 
 int SetTempLog ()
 {
-    int logfd = fast_open ("tmp.log");
+    int logfd = fast_open ("LOG/tmp.log");
     if (logfd == -1)
         return -1;
 

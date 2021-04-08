@@ -1,158 +1,180 @@
-#include "Com_libs/includes.h"
-#include "Com_libs/const.h"
-#include "packet/packet.h"
-#include "ID/ID.h"
+#include "../Com_libs/includes.h"
+#include "../Com_libs/const.h"
+#include "../packet/packet.h"
+#include "../ID/ID.h"
 
-int log_file = 0;
+static const char LOG_FILE [] = "/home/mark/VS_prog/2nd_grade/C_4_Sockets/LOG/serverTCP.log";
+static const int SIZE_CONNECTION = 20;
 
-#define NEW_CLIENT -1
-#define LOG_FILE "/tmp/my_server.txt"
-#define LOG_FILE_SLAVE "/tmp/my_server_slave.txt"
-#define LOG(str) ERROR_CHECK_file(write(log_file, str, strlen(str)), -1, "Can't write to log", log_file)
+static int init_daemon ();
+static int StartServer (int sk , struct sockaddr_in* name , struct sockaddr* name_);
 
-void WriteMessage (int ID , M_pack_unnamed* pack);
-void init_daemon ();
+static int CreateNewClient (int client_sk , struct sockaddr_in* addr);
+static void Close ();
 
-//returns true if confirmed new
-char CheckNewClient (M_pack_named* pack , struct sockaddr_in* addr , int sk);
-void Close (int socket);
+#define EXIT_PROGRAM_SIG SIGUSR1
+static void ExitProgramm (int sig);
+
+static int SK = 0;
 
 int main ()
 {
-    int sk = socket (AF_INET , SOCK_STREAM , 0);
-    ERROR_CHECK (sk , SOCK_ERR , "Unable to create socket!");
+    if (init_daemon () == -1)
+        return EXIT_SUCCESS;
+
+    SK = socket (AF_INET , SOCK_STREAM , 0);
+    if (SK == SOCK_ERR)
+    {
+        pr_err ("Unable to create socket!");
+        return EXIT_FAILURE;
+    }
+
+    if (signal (EXIT_PROGRAM_SIG , &ExitProgramm) != NULL)
+    {
+        pr_strerr ("Can't define function for signal %d!" , EXIT_PROGRAM_SIG);
+        return -1;
+    }
 
     struct in_addr in_ad = { inet_addr (INET) };
-    struct sockaddr_in name = { AF_INET, PORT_TCP, in_ad, 0 };
-
+    struct sockaddr_in name = { AF_INET, PORT, in_ad, 0 };
     struct sockaddr* name_ = (struct sockaddr*)&name;
-    socklen_t sock_len = sizeof (struct sockaddr_in);
 
-    ERROR_CHECK_2 (bind (sk , name_ , sock_len) , SOCK_ERR ,
-                   "Unable to bind socket!" , close (sk));
-
-    if (listen (sk , MAX_CLIENTS) != 0)
-        ERROR ("Can't listen to sockets!");
-
-    init_daemon ();
-
-    while (1)    
-{
-        M_pack_named* pack = M_ReadPack_Named (sk , name_);
-
-        if (pack == NULL)
-            break;
-
-        LOG ("Readed: ");
-        LOG (pack->data_);
-        LOG ("\n");
-
-        //printf("%s\n", pack->data_);
-        if (strcmp (pack->data_ , "CLOSE_SERVER") == CMP_EQ)
-            break;
-
-        if (!CheckNewClient (pack , &name , sk))
-            WriteMessage (pack->name_ , M_RecoverPack (pack));
-
-        M_DestroyPack_Named (pack);
+    if (bind (SK , name_ , sizeof (struct sockaddr_in)) == SOCK_ERR)
+    {
+        pr_err ("Unable to bind socket!");
+        close (SK);
+        return EXIT_FAILURE;
     }
 
-    Close (sk);
+    pr_info ("Server was initialized!");
+    StartServer (SK , &name , name_);
+
+    pr_info ("Exit programm");
+    Close ();
     return 0;
 }
 
-char CheckNewClient (M_pack_named* pack , struct sockaddr_in* addr , int sk)
+int StartServer (int sk , struct sockaddr_in* name , struct sockaddr* name_)
 {
-    if (pack->name_ == NEW_CLIENT)
+    if (listen (sk , SIZE_CONNECTION) == -1)
     {
-        int new_pipe[2] = {};
-        if (pipe (new_pipe) == -1)
-            LOG ("Can't create pipe");
-        int new_id = M_AddID (new_pipe[1]);
+        pr_strerr ("Can't listen to sockets");
+        return -1;
+    }
 
-        char out_str[5][16] = {};
-        sprintf (out_str[0] , "%d" , new_pipe[0]);
-        sprintf (out_str[1] , "%d" , sk);
-        sprintf (out_str[2] , "%d" , addr->sin_port);
-        sprintf (out_str[3] , "%d" , addr->sin_addr.s_addr);
-        sprintf (out_str[4] , "%d" , new_id);
-
-        pid_t pd = fork ();
-        if (pd == 0
-        && execlp ("/home/mark/VS_prog/HW4/Sockets/Project/build/./server_slave.o" , "/home/mark/VS_prog/HW4/Sockets/Project/build/./server_slave.o" , out_str[0] , out_str[1] , out_str[2] , out_str[3] , out_str[4] , NULL) == EXEC_ERR)
+    while (1)
+    {
+        int client_sk = accept (sk , NULL , NULL);
+        if (client_sk < 0)
         {
-            LOG ("Can't create server_slave!");
-            raise (SIGKILL);
+            pr_strerr ("Can't accept client!");
+            return -1;
         }
 
-        LOG ("Created new client: ");
-        LOG (out_str[4]);
-        LOG ("\n");
-        return 1;
+        if (CreateNewClient (client_sk , name) == -1)
+            return -1;
+
+        close (client_sk);
     }
+}
+
+int CreateNewClient (int client_sk , struct sockaddr_in* addr)
+{
+    pr_info ("Creating new client at %d fd" , client_sk);
+
+    int cur_pid = getpid ();
+    pr_info ("Current pid is %d" , cur_pid);
+
+    if (fork () == 0)
+    {//child
+        char out_str[4][16] = {};
+        if (sprintf (out_str[0] , "%d" , client_sk) <= 0
+        || sprintf (out_str[1] , "%d" , addr->sin_port) <= 0
+        || sprintf (out_str[2] , "%d" , addr->sin_addr.s_addr) <= 0
+        || sprintf (out_str[3] , "%d" , cur_pid) <= 0)
+        {
+            pr_err ("Can't create strings for slaves!");
+            return -1;
+        }
+
+        if (execlp ("/home/mark/VS_prog/2nd_grade/C_4_Sockets/build/./server_slaveTCP.o" ,
+            "/home/mark/VS_prog/2nd_grade/C_4_Sockets/build/./server_slaveTCP.o" ,
+            out_str[0] , out_str[1] , out_str[2] , out_str[3] , NULL) == EXEC_ERR)
+        {
+            pr_strerr ("Can't create server_slave!");
+            return -1;
+        }
+    }
+
     return 0;
 }
 
-void Close (int socket)
+
+void Close ()
 {
-    M_Close_IDS (socket);
-    close (socket);
-    LOG ("Unlinked!\n");
-    close (log_file);
+    close (SK);
+    pr_info ("Unlinked!");
+    UnSetLogFile ();
 }
 
-void WriteMessage (int ID , M_pack_unnamed* pack)
+void ExitProgramm (int sig)
 {
-    if (strcmp (pack->data_ , "exit") == CMP_EQ)
-    {
-        LOG ("Client has exited!\n");
-        char buf [] = "CLOSE_SERVER";
-        M_pack_unnamed* packet = M_CreatePack_Unnamed (buf , strlen (buf));
-        WriteMessage (ID , packet);
-        M_DestroyPack_Unnamed (packet);
-
-        M_DeleteID (ID);
-        return;
-    }
-
-    int fd = M_GetFD_FromID (ID);
-    if (fd == -1)
-    {
-        WARNING ("Can't write into -1 pipe!");
-        return;
-    }
-
-    LOG ("Writing to slave: ");
-    LOG (pack->data_);
-    LOG ("\n");
-    M_WritePack_Unnamed (fd , pack);
+    Close ();
+    raise (SIGKILL);
 }
 
 
-void init_daemon ()
+
+
+
+
+
+
+
+
+
+
+
+
+
+int init_daemon ()
 {
+    pr_info ("Initializing daemon!");
+
     pid_t pd = 0;
-    ERROR_CHECK ((pd = fork ()) , -1 , "Can't create pif from fork");
+    if ((pd = fork ()) == -1)
+    {
+        pr_strerr ("Can't create pid from fork");
+        return -1;
+    }
     if (pd != 0)
-        exit (EXIT_SUCCESS);
+        return -1;
 
     umask (0);
     pid_t sid = 0;
-    ERROR_CHECK ((sid = setsid ()) , -1 , "Can't set sid");
+    if ((sid = setsid ()) == -1)
+    {
+        pr_strerr ("Can't set sid");
+        return -1;
+    }
 
-    ERROR_CHECK (chdir ("/") , -1 , "Can't change directory!");
+    if (chdir ("/") == -1)
+    {
+        pr_strerr ("Can't change directory!");
+        return -1;
+    }
 
-    pid_t daemon_pid = getpid ();
+    pr_info ("Daemon was initialized!");
 
-    ERROR_CHECK ((log_file = open (LOG_FILE , O_RDWR | O_CREAT | O_TRUNC , 0666)) , -1 , "Can't create log file!");
-    char buf[20] = { 0 };
-    sprintf (buf , "%d\n" , daemon_pid);
-    LOG ("Daemon was initialized!\n");
+    int logfd = fast_open (LOG_FILE);
+    if (logfd == -1)
+        return -1;
+    if (SetLogFile (logfd) == -1)
+        return -1;
 
     close (STDIN_FILENO);
     close (STDOUT_FILENO);
     close (STDERR_FILENO);
 
-
-    LOG (buf);
+    return 0;
 }

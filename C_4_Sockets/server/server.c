@@ -4,7 +4,7 @@
 #include "../ID/ID.h"
 
 #define NEW_CLIENT -1
-static const char LOG_FILE [] = "/home/mark/VS_prog/2nd_grade/C_4_Sockets/server.log";
+static const char LOG_FILE [] = "/home/mark/VS_prog/2nd_grade/C_4_Sockets/LOG/server.log";
 
 //return 0 if success
 int WriteMessage (int ID , M_pack_unnamed* pack);
@@ -68,7 +68,7 @@ int StartServer (int sk , struct sockaddr_in* name, struct sockaddr* name_)
         {
         case -1: //error
             return -1;
-        case 0: //client was existed
+        case 0: //client exists
             if (WriteMessage (pack->name_ , M_RecoverPack (pack)) == -1)
                 return -1;
             break;

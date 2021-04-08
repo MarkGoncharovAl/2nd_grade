@@ -16,6 +16,7 @@ static int check_bash (int fd);
 static int check_buffer (char* buffer);
 static int print_cur_dir ();
 static int send_message (char* str);
+static int send_message_size (char* str, size_t size);
 static int do_ls ();
 
 //dynamic output
@@ -28,6 +29,7 @@ static int my_socket = 0;
 static int port = 0;
 static struct sockaddr* name = NULL;
 static char* ID = NULL;
+static int big_buffer_size = 0;
 
 /* argv:
 [1] - pipe_reading
@@ -111,7 +113,7 @@ static int StartSlave ()
 int SetLogFileID (char* ID)
 {
     char buf[100] = {};
-    if (sprintf (buf , "/home/mark/VS_prog/2nd_grade/C_4_Sockets/slave%s.log" , ID) == -1)
+    if (sprintf (buf , "/home/mark/VS_prog/2nd_grade/C_4_Sockets/LOG/slave%s.log" , ID) == -1)
     {
         pr_strerr ("Can't create name of log file slave%s" , ID);
         return -1;
@@ -245,7 +247,7 @@ int check_bash (int fd)
 
         M_DestroyPack_Unnamed (pack);
         pr_info ("SENDING: %s" , buf);
-        if (send_message (buf) == -1)
+        if (send_message_size (buf, big_buffer_size) == -1)
             return -1;
     }
 
@@ -441,6 +443,21 @@ int send_message (char* str)
     return 0;
 }
 
+int send_message_size (char* str, size_t size)
+{
+    pr_info ("Sending message");
+    M_pack_named* packet = M_CreatePack_Named_Mem (str , size , 0);
+    if (packet == NULL)
+        return -1;
+
+    if (M_WritePack_Named (my_socket , name , packet) == -1)
+        return -1;
+
+    free (packet);
+    pr_info ("Message was sent");
+    return 0;
+}
+
 
 char big_buffer[64 * BUFSZ] = {};
 char* write_into_bash (int fd , M_pack_unnamed* pack , struct pollfd* pollfds)
@@ -471,6 +488,10 @@ char* write_into_bash (int fd , M_pack_unnamed* pack , struct pollfd* pollfds)
         }
     }
 
-    big_buffer[bytes] = '\0';
+    while (big_buffer[bytes - 1] != '$')
+        bytes--;
+    big_buffer[bytes] = ' ';
+    big_buffer[bytes + 1] = '\0';
+    
     return big_buffer;
 }
