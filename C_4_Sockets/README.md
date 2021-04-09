@@ -7,8 +7,8 @@ to pass different tests.
 
 ### Description
 1. Install
-2. How it works
-3. Usage
+2. Usage
+3. How it works
 4. Version
 
 Install
@@ -16,17 +16,6 @@ Install
 1. clone this repository
 2. ```mkdir build```
 3. ```make```
-
-How it works
-============
-
-![Scheme of work](images/1.png)
-
-1. Client is sending request to server in order to get ID (UDP)
-2. Server is searching free ID in ID_base
-3. Returns ID to client and creating slave that will work on this client
-4. Server now just check ID of new messages and translating them to slaves accordingly
-5. Slaves just translate client's requst and give them necessary information
 
 Usage
 =====
@@ -38,6 +27,16 @@ Usage
 6. Write ```CLOSE_SERVER``` in client in order to close ##### server
 7. In order to fast closing UDP server can be used ```make close```
 8. Use ```bash``` in client in order to use client like ordinary terminal
+
+
+How it works
+============
+1. Client is sending request to server in order to get ID (UDP)
+2. Server is searching free ID in ID_base
+3. Returns ID to client and creating slave that will work on this client
+4. Server now just check ID of new messages and translating them to slaves accordingly
+5. Slaves just translate client's requst and give them necessary information
+![Scheme of work](images/1.png)
 
 Version
 ========
