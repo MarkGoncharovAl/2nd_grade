@@ -122,13 +122,13 @@ exit2:
 int SetLogFileID (char* ID)
 {
     char buf[100] = {};
-    if (sprintf (buf , "/var/log/slaveTCP%s.log" , ID) == -1)
+    if (sprintf (buf , "/var/log/slave%s.log" , ID) == -1)
     {
-        pr_strerr ("Can't create name of log file slaveTCP%s" , ID);
+        pr_strerr ("Can't create name of log file slave%s" , ID);
         return -1;
     }
 
-    int logfd = fast_open (buf);
+    int logfd = FastOpen (buf);
     if (logfd == -1)
         return -1;
     if (SetLogFile (logfd) == -1)
@@ -234,25 +234,27 @@ int CheckBash (int fd)
         return -1;
 
     pr_info ("Main checking bash is started!");
+    M_pack_named* pack = NULL;
+    int ret = 0;
+
     while (1)
     {
-        M_pack_named* pack = M_ReadPack_Named (my_socket , name);
+        pack = M_ReadPack_Named (my_socket , name);
         if (pack == NULL)
             return -1;
 
         pr_info ("Getted message: %s" , pack->data_);
         if (strcmp (pack->data_ , "CLOSE_SERVER") == CMP_EQ)
         {
-            M_DestroyPack_Named (pack);
-            return -1;
+            kill (pid_parent , SIGKILL);
+            EXIT1 (-1);
         }
+        if (strcmp (pack->data_ , "exit") == CMP_EQ)
+            EXIT1 (-1);
 
         char* buf = WriteIntoBash (fd , pack , &pollfds);
         if (buf == NULL)
-        {
-            M_DestroyPack_Named (pack);
-            return -1;
-        }
+            EXIT1 (-1);
 
         M_DestroyPack_Named (pack);
 
@@ -261,7 +263,9 @@ int CheckBash (int fd)
             return -1;
     }
 
-    return 0;
+exit1:
+    M_DestroyPack_Named (pack);
+    return ret;
 }
 
 int PrintFirstCommand (int fd , struct pollfd* poll)
@@ -352,7 +356,7 @@ int PrintCurDir ()
     return err;
 }
 
-static int cat_strings (int pipes[2] , char* big , char* small , char* dir);
+static int CatStrings (int pipes[2] , char* big , char* small , char* dir);
 int MakeLs ()
 {
     pr_info ("Doing ls");
@@ -392,14 +396,14 @@ int MakeLs ()
     waitpid (pd , NULL , 0);
     char buffer[924] = {};
 
-    if (cat_strings (new_pipe , Dir_buffer , buffer1 , buffer) == -1)
+    if (CatStrings (new_pipe , Dir_buffer , buffer1 , buffer) == -1)
         return -1;
 
     pr_info ("Ls was done");
     return 0;
 }
 
-int cat_strings (int pipes[2] , char* big , char* small , char* dir)
+int CatStrings (int pipes[2] , char* big , char* small , char* dir)
 {
     if (write (pipes[1] , "\0" , 1) == WRITE_ERR)
     {
@@ -488,7 +492,7 @@ char* WriteIntoBash (int fd , M_pack_named* pack , struct pollfd* pollfds)
         }
     }
 
-    while (big_buffer[bytes - 1] != '$')
+    while (bytes > 0 && big_buffer[bytes - 1] != '#')
         bytes--;
     big_buffer[bytes] = ' ';
     big_buffer[bytes + 1] = '\0';

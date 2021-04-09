@@ -12,4 +12,4 @@ void M_DeleteID(int ID);
 //returns -1 if client wasn't found
 int M_GetFD_FromID(int ID);
 
-int M_Close_IDS(int sk);
+int M_Close_IDS();

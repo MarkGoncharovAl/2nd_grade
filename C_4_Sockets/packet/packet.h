@@ -6,7 +6,7 @@ typedef struct
 {
     size_t size_;
     char* data_;
-    int name_;
+    int ID_;
 } M_pack_named;
 
 typedef struct

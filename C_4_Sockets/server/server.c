@@ -14,7 +14,7 @@ int StartServer (int sk , struct sockaddr_in* name , struct sockaddr* name_);
 //-1 - Error was occured
 // 0 - Client was already signed
 // 1 - New client
-char CreateNewClient (M_pack_named* pack , struct sockaddr_in* addr , int sk);
+char CreateNewClient (struct sockaddr_in* addr , int sk);
 
 void Close (int socket);
 
@@ -68,15 +68,15 @@ int StartServer (int sk , struct sockaddr_in* name , struct sockaddr* name_)
         if (strcmp (pack->data_ , "CLOSE_SERVER") == CMP_EQ)
             return 0;
 
-        if (pack->name_ == NEW_CLIENT)
+        if (pack->ID_ == NEW_CLIENT)
         {
-            ret = CreateNewClient (pack , name , sk);
+            ret = CreateNewClient (name , sk);
             if (ret == -1)
                 goto exit;
         }
         else //client was already created
         {
-            ret = WriteMessage (pack->name_ , M_RecoverPack (pack));
+            ret = WriteMessage (pack->ID_ , M_RecoverPack (pack));
             if (ret == -1)
                 goto exit;
         }
@@ -87,7 +87,7 @@ exit:
     return ret;
 }
 
-char CreateNewClient (M_pack_named* pack , struct sockaddr_in* addr , int sk)
+char CreateNewClient (struct sockaddr_in* addr , int sk)
 {
     int new_pipe[2] = {};
     if (pipe (new_pipe) == -1)
@@ -194,7 +194,7 @@ int InitDaemon ()
 
     pr_info ("Daemon was initialized!");
 
-    int logfd = fast_open (LOG_FILE);
+    int logfd = FastOpen (LOG_FILE);
     if (logfd == -1)
         return -1;
     if (SetLogFile (logfd) == -1)

@@ -7,54 +7,43 @@ static const char LOG_FILE [] = "/var/log/serverTCP.log";
 static const int SIZE_CONNECTION = 20;
 
 static int init_daemon ();
-static int StartServer (int sk , struct sockaddr_in* name , struct sockaddr* name_);
+static int StartServer (int sk , struct sockaddr_in* name);
 
 static int CreateNewClient (int client_sk , struct sockaddr_in* addr);
-static void Close ();
-
-#define EXIT_PROGRAM_SIG SIGUSR1
-static void ExitProgramm (int sig);
-
-static int SK = 0;
+static void CloseServer (int sk);
 
 int main ()
 {
     if (init_daemon () == -1)
         return EXIT_SUCCESS;
 
-    SK = socket (AF_INET , SOCK_STREAM , 0);
-    if (SK == SOCK_ERR)
+    int sk = socket (AF_INET , SOCK_STREAM , 0);
+    if (sk == SOCK_ERR)
     {
         pr_err ("Unable to create socket!");
         return EXIT_FAILURE;
-    }
-
-    if (signal (EXIT_PROGRAM_SIG , &ExitProgramm) != NULL)
-    {
-        pr_strerr ("Can't define function for signal %d!" , EXIT_PROGRAM_SIG);
-        return -1;
     }
 
     struct in_addr in_ad = { inet_addr (INET) };
     struct sockaddr_in name = { AF_INET, PORT, in_ad, 0 };
     struct sockaddr* name_ = (struct sockaddr*)&name;
 
-    if (bind (SK , name_ , sizeof (struct sockaddr_in)) == SOCK_ERR)
+    if (bind (sk , name_ , sizeof (struct sockaddr_in)) == SOCK_ERR)
     {
         pr_err ("Unable to bind socket!");
-        close (SK);
+        close (sk);
         return EXIT_FAILURE;
     }
 
     pr_info ("Server was initialized!");
-    StartServer (SK , &name , name_);
+    StartServer (sk , &name);
 
     pr_info ("Exit programm");
-    Close ();
+    CloseServer (sk);
     return 0;
 }
 
-int StartServer (int sk , struct sockaddr_in* name , struct sockaddr* name_)
+int StartServer (int sk , struct sockaddr_in* name)
 {
     if (listen (sk , SIZE_CONNECTION) == -1)
     {
@@ -110,17 +99,11 @@ int CreateNewClient (int client_sk , struct sockaddr_in* addr)
 }
 
 
-void Close ()
+void CloseServer (int sk)
 {
-    close (SK);
+    close (sk);
     pr_info ("Unlinked!");
     UnSetLogFile ();
-}
-
-void ExitProgramm (int sig)
-{
-    Close ();
-    raise (SIGKILL);
 }
 
 
@@ -166,7 +149,7 @@ int init_daemon ()
 
     pr_info ("Daemon was initialized!");
 
-    int logfd = fast_open (LOG_FILE);
+    int logfd = FastOpen (LOG_FILE);
     if (logfd == -1)
         return -1;
     if (SetLogFile (logfd) == -1)

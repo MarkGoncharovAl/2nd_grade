@@ -28,7 +28,6 @@ static int pipe_rd = 0;
 static int my_socket = 0;
 static int port = 0;
 static struct sockaddr* name = NULL;
-static char* ID = NULL;
 static int big_buffer_size = 0;
 
 /* argv:
@@ -93,10 +92,10 @@ static int StartSlave ()
             EXIT1 (0);
 
         if (strcmp (pack->data_ , "bash") == CMP_EQ)
-            EXIT1(CreateBash ());
+            EXIT1 (CreateBash ());
 
         if (CheckBuffer (pack->data_) == -1)
-            EXIT(-1);
+            EXIT1 (-1);
 
         M_DestroyPack_Unnamed (pack);
     }
@@ -104,7 +103,7 @@ static int StartSlave ()
 
 exit1:
     M_DestroyPack_Unnamed (pack);
-    return 0;
+    return ret;
 }
 
 int SetLogFileID (char* ID)
@@ -116,7 +115,7 @@ int SetLogFileID (char* ID)
         return -1;
     }
 
-    int logfd = fast_open (buf);
+    int logfd = FastOpen (buf);
     if (logfd == -1)
         return -1;
     if (SetLogFile (logfd) == -1)
@@ -307,10 +306,13 @@ int MakeCD (char* buffer)
 
     if (buffer[0] == ' ')
         err = chdir (buffer + 1);
-    else if (buffer[0] == '\0')
-        err == chdir ("/");
     else
-        err = -1;
+    {
+        if (buffer[0] == '\0')
+            err == chdir ("/");
+        else
+            err = -1;
+    }
 
     if (err == -1)
         err = SendMessage ("Can't do this with directories!\n");
@@ -338,7 +340,7 @@ int PrintCurDir ()
     return err;
 }
 
-static int cat_strings (int pipes[2] , char* big , char* small , char* dir);
+static int CatStrings (int pipes[2] , char* big , char* small , char* dir);
 int MakeLs ()
 {
     pr_info ("Doing ls");
@@ -378,14 +380,14 @@ int MakeLs ()
     waitpid (pd , NULL , 0);
     char buffer[924] = {};
 
-    if (cat_strings (new_pipe , Dir_buffer , buffer1 , buffer) == -1)
+    if (CatStrings (new_pipe , Dir_buffer , buffer1 , buffer) == -1)
         return -1;
 
     pr_info ("Ls was done");
     return 0;
 }
 
-int cat_strings (int pipes[2] , char* big , char* small , char* dir)
+int CatStrings (int pipes[2] , char* big , char* small , char* dir)
 {
     if (write (pipes[1] , "\0" , 1) == WRITE_ERR)
     {
@@ -474,7 +476,7 @@ char* WriteIntoBash (int fd , M_pack_unnamed* pack , struct pollfd* pollfds)
         }
     }
 
-    while (big_buffer[bytes - 1] != '$')
+    while (bytes > 0 && big_buffer[bytes - 1] != '#')
         bytes--;
     big_buffer[bytes] = ' ';
     big_buffer[bytes + 1] = '\0';

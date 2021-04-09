@@ -2,23 +2,21 @@
 #include "../Com_libs/const.h"
 #include "../packet/packet.h"
 
-static in_addr_t check_argc (int argc , char* argv);
-static int GetID (int sk , struct sockaddr* addr1 , struct sockaddr* addr2);
+static in_addr_t CheckArgc (int argc , char* argv);
+static int GetIDFromServer (int sk , struct sockaddr* addr1 , struct sockaddr* addr2);
 static int SetLogFileID (int ID);
 static int SetTempLog ();
-static int StartClient (int sk , struct sockaddr* send , struct sockaddr* recv, int id);
+static int StartClient (int sk , struct sockaddr* send , struct sockaddr* recv , int id);
 
 int main (int argc , char* argv [])
 {
     if (SetTempLog () == -1)
         return 1;
-        
+
     pr_info ("Logging is starting");
 
-    struct in_addr in_ad = { check_argc (argc, argv[1]) };
-    if (in_ad.s_addr == -1)
-        return 1;
-
+    struct in_addr in_ad = { CheckArgc (argc, argv[1]) };
+    
     int sk = socket (AF_INET , SOCK_DGRAM , 0);
     if (sk == SOCK_ERR)
     {
@@ -41,7 +39,7 @@ int main (int argc , char* argv [])
 
     // in order to get information
     ////////////////////////////////////
-    const struct sockaddr_in receiving = { AF_INET, 0, in_ad };
+    const struct sockaddr_in receiving = { AF_INET, 0, in_ad, 0 };
     struct sockaddr* receiving_ = (struct sockaddr*)&receiving;
     socklen_t sock_len = sizeof (struct sockaddr_in);
 
@@ -53,7 +51,7 @@ int main (int argc , char* argv [])
     }
     ////////////////////////////////////
 
-    int ID_CLIENT = GetID (sk , sending_ , receiving_);
+    int ID_CLIENT = GetIDFromServer (sk , sending_ , receiving_);
     if (ID_CLIENT == -1)
         return -1;
 
@@ -61,14 +59,14 @@ int main (int argc , char* argv [])
         return -1;
 
     pr_info ("Client was initialized");
-    StartClient (sk , sending_ , receiving_, ID_CLIENT);
+    StartClient (sk , sending_ , receiving_ , ID_CLIENT);
 
     pr_info ("Unlinking");
     close (sk);
     return 0;
 }
 
-int StartClient (int sk , struct sockaddr* send , struct sockaddr* recv, int id)
+int StartClient (int sk , struct sockaddr* send , struct sockaddr* recv , int id)
 {
     char getstr[BUFSZ] = {};
     while (1)
@@ -94,6 +92,8 @@ int StartClient (int sk , struct sockaddr* send , struct sockaddr* recv, int id)
 
         if (strcmp (getstr , "exit") == 0)
             return 0;
+        if (strcmp (getstr , "CLOSE_SERVER") == 0)
+            return 0;
 
         M_pack_named* packet = M_ReadPack_Named (sk , recv);
         if (pack == NULL)
@@ -105,7 +105,7 @@ int StartClient (int sk , struct sockaddr* send , struct sockaddr* recv, int id)
     return 0;
 }
 
-int GetID (int sk , struct sockaddr* addr1 , struct sockaddr* addr2)
+int GetIDFromServer (int sk , struct sockaddr* addr1 , struct sockaddr* addr2)
 {
     pr_info ("Getting ID");
 
@@ -131,7 +131,7 @@ int GetID (int sk , struct sockaddr* addr1 , struct sockaddr* addr2)
     return out;
 }
 
-in_addr_t check_argc (int argc , char* argv)
+in_addr_t CheckArgc (int argc , char* argv)
 {
     pr_info ("Cheking for BROADCASTING: ");
 
@@ -160,10 +160,10 @@ int SetLogFileID (int ID)
 {
     pr_info ("Setting log file to %d" , ID);
 
-    char buf[20] = {};
+    char buf[30] = {};
     sprintf (buf , "/var/log/client%d.log" , ID);
 
-    int logfd = fast_open (buf);
+    int logfd = FastOpen (buf);
     if (logfd == -1)
         return -1;
 
@@ -177,7 +177,7 @@ int SetLogFileID (int ID)
 
 int SetTempLog ()
 {
-    int logfd = fast_open ("LOG/tmp.log");
+    int logfd = FastOpen ("/var/log/tmp.log");
     if (logfd == -1)
         return -1;
 

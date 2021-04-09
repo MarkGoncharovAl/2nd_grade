@@ -55,7 +55,7 @@ int M_GetFD_FromID (int ID)
     return IDS[ID];
 }
 
-int M_Close_IDS (int sk)
+int M_Close_IDS ()
 {
     pr_info("Closing IDs");
     for (int cur_id = 0; cur_id < last_data_fork; ++cur_id)

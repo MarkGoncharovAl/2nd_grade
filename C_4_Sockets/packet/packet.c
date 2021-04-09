@@ -18,7 +18,7 @@ M_pack_named* M_CreatePack_Named (const char* data , size_t size , int name)
         return NULL;
     }
 
-    out->name_ = name;
+    out->ID_ = name;
     out->size_ = size;
     out->data_ = (char*)malloc (sizeof (char) * (size));
     if (out->data_ == NULL)
@@ -82,7 +82,7 @@ M_pack_named* M_CreatePack_Named_Mem (char* data , size_t size , int name)
         return NULL;
     }
 
-    out->name_ = name;
+    out->ID_ = name;
     out->data_ = data;
     out->size_ = size;
 
@@ -240,7 +240,7 @@ M_pack_named* M_ReadPack_Named (int fd , struct sockaddr* addr)
     }
 
     socklen_t sock_len = sizeof (struct sockaddr_in);
-    if (recvfrom (fd , &(out->name_) , sizeof (out->name_) , 0 , addr , &sock_len) == SOCK_ERR)
+    if (recvfrom (fd , &(out->ID_) , sizeof (out->ID_) , 0 , addr , &sock_len) == SOCK_ERR)
     {
         pr_strerr ("Can't properly read size from socket %d" , fd);
         free (out);
@@ -256,7 +256,7 @@ M_pack_named* M_ReadPack_Named (int fd , struct sockaddr* addr)
     out->data_ = (char*)malloc (out->size_ * sizeof (char));
     if (out->data_ == NULL)
     {
-        pr_strerr ("Can't get dynamic memory for info in pack: size: %u from socket %d!", out->size_, out->name_);
+        pr_strerr ("Can't get dynamic memory for info in pack: size: %u from socket %d!", out->size_, out->ID_);
         free (out);
         return NULL;
     }
@@ -268,7 +268,7 @@ M_pack_named* M_ReadPack_Named (int fd , struct sockaddr* addr)
     }
 
 #ifdef MAX_INFO
-    pr_info ("Received:\n\t%s\n\tIn %u bytes from %d" , out->data_ , out->size_, out->name_);
+    pr_info ("Received:\n\t%s\n\tIn %u bytes from %d" , out->data_ , out->size_, out->ID_);
 #endif
     return out;
 }
@@ -286,9 +286,9 @@ int M_WritePack_Named (int fd , struct sockaddr* addr , M_pack_named* pack)
 #endif
 
     socklen_t sock_len = sizeof (struct sockaddr_in);
-    if (sendto (fd , &(pack->name_) , sizeof (pack->name_) , 0 , addr , sock_len) == SOCK_ERR)
+    if (sendto (fd , &(pack->ID_) , sizeof (pack->ID_) , 0 , addr , sock_len) == SOCK_ERR)
     {
-        pr_strerr ("Can't properly write name %d" , pack->name_);
+        pr_strerr ("Can't properly write name %d" , pack->ID_);
         return -1;
     }
 
@@ -324,7 +324,7 @@ M_pack_named* M_CreatePack_STATIC (char* data , size_t size , int name)
     }
 
     out->size_ = size;
-    out->name_ = name;
+    out->ID_ = name;
     out->data_ = data;
     out->data_[size - 1] = '\0';
 

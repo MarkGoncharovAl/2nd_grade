@@ -7,15 +7,13 @@ static int StartClient (int sk , struct sockaddr* send);
 
 #define LOGGING_FILE "/var/log/clientTCP.log"
 
-int main (int argc , char* argv [])
+int main ()
 {
     if (SetLogFileID () == -1)
         return -1;
     pr_info ("Logging is starting");
 
     struct in_addr in_ad = { inet_addr (INET) };
-    if (in_ad.s_addr == -1)
-        return -1;
 
     int sk = socket (AF_INET , SOCK_STREAM , 0);
     if (sk == SOCK_ERR)
@@ -86,7 +84,7 @@ int StartClient (int sk , struct sockaddr* send)
 
 int SetLogFileID ()
 {
-    int logfd = fast_open (LOGGING_FILE);
+    int logfd = FastOpen (LOGGING_FILE);
     if (logfd == -1)
         return -1;
 
