@@ -11,13 +11,13 @@ static int StartClient (int sk , struct sockaddr* send , struct sockaddr* recv, 
 int main (int argc , char* argv [])
 {
     if (SetTempLog () == -1)
-        return -1;
+        return 1;
         
     pr_info ("Logging is starting");
 
     struct in_addr in_ad = { check_argc (argc, argv[1]) };
     if (in_ad.s_addr == -1)
-        return -1;
+        return 1;
 
     int sk = socket (AF_INET , SOCK_DGRAM , 0);
     if (sk == SOCK_ERR)
@@ -161,7 +161,7 @@ int SetLogFileID (int ID)
     pr_info ("Setting log file to %d" , ID);
 
     char buf[20] = {};
-    sprintf (buf , "LOG/client%d.log" , ID);
+    sprintf (buf , "/var/log/client%d.log" , ID);
 
     int logfd = fast_open (buf);
     if (logfd == -1)

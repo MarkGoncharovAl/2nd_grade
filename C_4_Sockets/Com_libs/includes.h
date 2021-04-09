@@ -25,3 +25,6 @@
 
 #include "log.h"
 #include "fast_use.h"
+
+#define EXIT1(err) {ret = err; goto exit1;}
+#define EXIT2(err) {ret = err; goto exit2;}

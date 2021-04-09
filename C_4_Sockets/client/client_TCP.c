@@ -5,7 +5,7 @@
 static int SetLogFileID ();
 static int StartClient (int sk , struct sockaddr* send);
 
-#define LOGGING_FILE "LOG/clientTCP.log"
+#define LOGGING_FILE "/var/log/clientTCP.log"
 
 int main (int argc , char* argv [])
 {

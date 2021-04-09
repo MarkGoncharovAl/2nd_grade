@@ -4,23 +4,23 @@
 #include "../ID/ID.h"
 
 #define NEW_CLIENT -1
-static const char LOG_FILE [] = "/home/mark/VS_prog/2nd_grade/C_4_Sockets/LOG/server.log";
+static const char LOG_FILE [] = "/var/log/server.log";
 
 //return 0 if success
 int WriteMessage (int ID , M_pack_unnamed* pack);
-int init_daemon ();
-int StartServer (int sk , struct sockaddr_in* name, struct sockaddr* name_);
+int InitDaemon ();
+int StartServer (int sk , struct sockaddr_in* name , struct sockaddr* name_);
 
 //-1 - Error was occured
 // 0 - Client was already signed
 // 1 - New client
-char CheckNewClient (M_pack_named* pack , struct sockaddr_in* addr , int sk);
+char CreateNewClient (M_pack_named* pack , struct sockaddr_in* addr , int sk);
 
 void Close (int socket);
 
 int main ()
 {
-    if (init_daemon () == -1)
+    if (InitDaemon () == -1)
         return EXIT_SUCCESS;
 
     int sk = socket (AF_INET , SOCK_DGRAM , 0);
@@ -42,18 +42,22 @@ int main ()
     }
 
     pr_info ("Server was initialized!");
-    StartServer (sk , &name, name_);
+    StartServer (sk , &name , name_);
 
     pr_info ("Exit programm");
     Close (sk);
     return 0;
 }
 
-int StartServer (int sk , struct sockaddr_in* name, struct sockaddr* name_)
+int StartServer (int sk , struct sockaddr_in* name , struct sockaddr* name_)
 {
+    M_pack_named* pack = NULL;
+    int ret = 0;
+
     while (1)
     {
-        M_pack_named* pack = M_ReadPack_Named (sk , name_);
+        pack = M_ReadPack_Named (sk , name_);
+
         if (pack == NULL)
             return -1;
 
@@ -64,65 +68,59 @@ int StartServer (int sk , struct sockaddr_in* name, struct sockaddr* name_)
         if (strcmp (pack->data_ , "CLOSE_SERVER") == CMP_EQ)
             return 0;
 
-        switch (CheckNewClient (pack , name , sk))
+        if (pack->name_ == NEW_CLIENT)
         {
-        case -1: //error
-            return -1;
-        case 0: //client exists
-            if (WriteMessage (pack->name_ , M_RecoverPack (pack)) == -1)
-                return -1;
-            break;
-        case 1: //new client
-            break;
-        default: //not done
-            pr_err ("Can't understand mistake!");
-            return -1;
+            ret = CreateNewClient (pack , name , sk);
+            if (ret == -1)
+                goto exit;
         }
-
-        M_DestroyPack_Named (pack);
+        else //client was already created
+        {
+            ret = WriteMessage (pack->name_ , M_RecoverPack (pack));
+            if (ret == -1)
+                goto exit;
+        }
     }
+
+exit:
+    M_DestroyPack_Named (pack);
+    return ret;
 }
 
-char CheckNewClient (M_pack_named* pack , struct sockaddr_in* addr , int sk)
+char CreateNewClient (M_pack_named* pack , struct sockaddr_in* addr , int sk)
 {
-    pr_info ("Checking new client");
-    if (pack->name_ == NEW_CLIENT)
+    int new_pipe[2] = {};
+    if (pipe (new_pipe) == -1)
     {
-        int new_pipe[2] = {};
-        if (pipe (new_pipe) == -1)
-        {
-            pr_err ("Can't create pipe");
-            return -1;
-        }
-
-        int new_id = M_AddID (new_pipe[1]);
-
-        char out_str[5][16] = {};
-        if (sprintf (out_str[0] , "%d" , new_pipe[0]) <= 0
-         || sprintf (out_str[1] , "%d" , sk) <= 0
-         || sprintf (out_str[2] , "%d" , addr->sin_port) <= 0
-         || sprintf (out_str[3] , "%d" , addr->sin_addr.s_addr) <= 0
-         || sprintf (out_str[4] , "%d" , new_id) <= 0)
-        {
-            pr_err ("Can't create strings for slaves!");
-            return -1;
-        }
-
-        if (fork () == 0)
-        {//child
-            if (execlp ("/home/mark/VS_prog/2nd_grade/C_4_Sockets/build/./server_slave.o" ,
-                "/home/mark/VS_prog/2nd_grade/C_4_Sockets/build/./server_slave.o" ,
-                out_str[0] , out_str[1] , out_str[2] , out_str[3] , out_str[4] , NULL) == EXEC_ERR)
-            {
-                pr_err ("Can't create server_slave!");
-                return -1;
-            }
-        }
-
-        pr_info ("Created new client: %s" , out_str[4]);
-        return 1;
+        pr_err ("Can't create pipe");
+        return -1;
     }
 
+    int new_id = M_CreateID_FromFD (new_pipe[1]);
+
+    char out_str[5][16] = {};
+    if (sprintf (out_str[0] , "%d" , new_pipe[0]) <= 0
+     || sprintf (out_str[1] , "%d" , sk) <= 0
+     || sprintf (out_str[2] , "%d" , addr->sin_port) <= 0
+     || sprintf (out_str[3] , "%d" , addr->sin_addr.s_addr) <= 0
+     || sprintf (out_str[4] , "%d" , new_id) <= 0)
+    {
+        pr_err ("Can't create strings for slaves!");
+        return -1;
+    }
+
+    if (fork () == 0)
+    {//child
+        if (execlp ("/home/mark/VS_prog/2nd_grade/C_4_Sockets/build/./server_slave.o" ,
+            "/home/mark/VS_prog/2nd_grade/C_4_Sockets/build/./server_slave.o" ,
+            out_str[0] , out_str[1] , out_str[2] , out_str[3] , out_str[4] , NULL) == EXEC_ERR)
+        {
+            pr_err ("Can't create server_slave!");
+            return -1;
+        }
+    }
+
+    pr_info ("Created new client: %s" , out_str[4]);
     return 0;
 }
 
@@ -166,25 +164,12 @@ void Close (int socket)
     UnSetLogFile ();
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-int init_daemon ()
+int InitDaemon ()
 {
     pr_info ("Initializing daemon!");
 
     pid_t pd = 0;
+
     if ((pd = fork ()) == -1)
     {
         pr_strerr ("Can't create pid from fork");

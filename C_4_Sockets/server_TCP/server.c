@@ -3,7 +3,7 @@
 #include "../packet/packet.h"
 #include "../ID/ID.h"
 
-static const char LOG_FILE [] = "/home/mark/VS_prog/2nd_grade/C_4_Sockets/LOG/serverTCP.log";
+static const char LOG_FILE [] = "/var/log/serverTCP.log";
 static const int SIZE_CONNECTION = 20;
 
 static int init_daemon ();

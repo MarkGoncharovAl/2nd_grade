@@ -6,14 +6,43 @@ to control programming style, to add many useful properties,
 to pass different tests.
 
 ### Description
-1. Requirements
-2. Versions
-3. Install
-4. Usage
-5. How it works
+1. Install
+2. How it works
+3. Usage
+4. Version
 
-Requirements
+Install
+=======
+1. clone this repository
+2. ```mkdir build```
+3. ```make```
+
+How it works
 ============
+
+![Scheme of work](images/1.png)
+
+1. Client is sending request to server in order to get ID (UDP)
+2. Server is searching free ID in ID_base
+3. Returns ID to client and creating slave that will work on this client
+4. Server now just check ID of new messages and translating them to slaves accordingly
+5. Slaves just translate client's requst and give them necessary information
+
+Usage
+=====
+1. ```make``` - compile program files
+2. ```make server``` - creating daemon server
+3. ```make client``` - creating client
+4. ```make serverTCP``` and ```make clientTCP``` the same
+5. Write ```exit``` in client in order to exit ##### client
+6. Write ```CLOSE_SERVER``` in client in order to close ##### server
+7. In order to fast closing UDP server can be used ```make close```
+8. Use ```bash``` in client in order to use client like ordinary terminal
+
+Version
+========
+Requirements
+------------
 1. TCP/UDP switch for server and client
 2. Remote shell using ptmx
 3. Server must work in daemon mode
@@ -28,8 +57,8 @@ Requirements
 12. Program should pass tests
 13. Every program should properly handle signals like SIGKILL and so on
 
-Versions
-========
+Current version
+---------------
 | Task | Done | Preparing                         |
 | :---:|:----:|:---------------------------------:|
 | 1    | 0.8  | Common usage functions            |
@@ -46,7 +75,9 @@ Versions
 | 12   | 0    | Tests weren't prepared            |
 | 13   | 0.5  | Client is reaining                |
 
-1. 08.04
+Logging versions
+----------------
+08.04
 > Start README. Current targets:
 > 1. Optimize return value handling in functions
 > 2. Logging into /var/log
@@ -60,30 +91,5 @@ Versions
 > 10. Signal handling (can be used tcsetattr/cfmakeraw)
 > 11. Common usage for TCP and UDP
 
-Install
-=======
-1. clone this repository
-2. ```mkdir build; mkdir LOG```
-3. ```make```
-
-Usage
-=====
-1. ```make``` - compile program files
-2. ```make server``` - creating daemon server
-3. ```make client``` - creating client
-4. ```make serverTCP``` and ```make clientTCP``` the same
-5. Write ```exit``` in client in order to exit ##### client
-6. Write ```CLOSE_SERVER``` in client in order to close ##### server
-7. In order to fast closing UDP server can be used ```make close```
-8. Use ```bash``` in client in order to use client like ordinary terminal
-
-How it works
-============
-
-![Scheme of work](images/1.png)
-
-1. Client is sending request to server in order to get ID (UDP)
-2. Server is searching free ID in ID_base
-3. Returns ID to client and creating slave that will work on this client
-4. Server now just check ID of new messages and translating them to slaves accordingly
-5. Slaves just translate client's requst and give them necessary information
+09.04
+> Done: 1, 4

@@ -7,7 +7,7 @@ static int last_data_fork = 0;
 static int last_used_ip = -1;
 
 //returns new IP
-int M_AddID (int fd)
+int M_CreateID_FromFD (int fd)
 {
     pr_info ("Adding ID to fd %d" , fd);
 

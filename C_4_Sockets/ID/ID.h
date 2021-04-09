@@ -4,7 +4,7 @@
 #include "../packet/packet.h"
 
 //returns new IP
-int M_AddID(int fd);
+int M_CreateID_FromFD(int fd);
 
 //returns file descriptor
 void M_DeleteID(int ID);

@@ -9,18 +9,18 @@
 static int CheckArgs (int argc , char* argv []);
 static int StartSlave ();
 
-static int create_bash ();
+static int CreateBash ();
 static int GetResFd (int fd , struct termios* flags);
-static int check_bash (int fd);
+static int CheckBash (int fd);
 
-static int check_buffer (char* buffer);
-static int print_cur_dir ();
-static int send_message (char* str);
-static int send_message_size (char* str, size_t size);
-static int do_ls ();
+static int CheckBuffer (char* buffer);
+static int PrintCurDir ();
+static int SendMessage (char* str);
+static int SendMessageSize (char* str , size_t size);
+static int MakeLs ();
 
 //dynamic output
-static char* write_into_bash (int fd , M_pack_unnamed* pack , struct pollfd* pollfds);
+static char* WriteIntoBash (int fd , M_pack_unnamed* pack , struct pollfd* pollfds);
 
 static int SetLogFileID (char* ID);
 
@@ -48,7 +48,7 @@ int main (int argc , char* argv [])
     struct sockaddr_in sock_addr = { AF_INET, port, addr, 0 };
     name = (struct sockaddr*)(&sock_addr);
 
-    if (send_message (argv[5]) == -1) //ID CLIENT
+    if (SendMessage (argv[5]) == -1) //ID CLIENT
         return -1;
 
     pr_info ("Server slave was initialized");
@@ -80,40 +80,37 @@ int CheckArgs (int argc , char* argv [])
 
 static int StartSlave ()
 {
+    M_pack_unnamed* pack = NULL;
+    int ret = 0;
+
     while (1)
     {
-        M_pack_unnamed* pack = M_ReadPack_Unnamed (pipe_rd);
+        pack = M_ReadPack_Unnamed (pipe_rd);
         if (pack == NULL)
-            return -1;
+            return 1;
 
         if (strcmp (pack->data_ , "CLOSE_SERVER") == CMP_EQ)
-        {
-            M_DestroyPack_Unnamed (pack);
-            return 0;
-        }
+            EXIT1 (0);
 
         if (strcmp (pack->data_ , "bash") == CMP_EQ)
-        {
-            M_DestroyPack_Unnamed (pack);
-            return create_bash ();
-        }
+            EXIT1(CreateBash ());
 
-        if (check_buffer (pack->data_) == -1)
-        {
-            M_DestroyPack_Unnamed (pack);
-            return -1;
-        }
+        if (CheckBuffer (pack->data_) == -1)
+            EXIT(-1);
 
         M_DestroyPack_Unnamed (pack);
     }
 
+
+exit1:
+    M_DestroyPack_Unnamed (pack);
     return 0;
 }
 
 int SetLogFileID (char* ID)
 {
     char buf[100] = {};
-    if (sprintf (buf , "/home/mark/VS_prog/2nd_grade/C_4_Sockets/LOG/slave%s.log" , ID) == -1)
+    if (sprintf (buf , "/var/log/slave%s.log" , ID) == -1)
     {
         pr_strerr ("Can't create name of log file slave%s" , ID);
         return -1;
@@ -127,7 +124,7 @@ int SetLogFileID (char* ID)
     return 0;
 }
 
-int create_bash ()
+int CreateBash ()
 {
     pr_info ("Creating bash!");
 
@@ -165,7 +162,7 @@ int create_bash ()
 
     pr_info ("Created bash of server slave");
 
-    int ret = check_bash (fd);
+    int ret = CheckBash (fd);
     close (fd);
     close (resfd);
     return ret;
@@ -210,57 +207,56 @@ int GetResFd (int fd , struct termios* flags)
 }
 
 
-static int print_first_com (int fd , struct pollfd* poll);
-int check_bash (int fd)
+static int PrintFirstCommand (int fd , struct pollfd* poll);
+int CheckBash (int fd)
 {
     pr_info ("Checking bash");
-    if (send_message ("Bash was started!\n") == -1)
+    int ret = 0;
+    if (SendMessage ("Bash was started!\n") == -1)
         return -1;
 
     struct pollfd pollfds;
     pollfds.fd = fd;
     pollfds.events = POLLIN;
 
-    if (print_first_com (fd , &pollfds) == -1)
+    if (PrintFirstCommand (fd , &pollfds) == -1)
         return -1;
 
     pr_info ("Main checking bash is started!");
+    M_pack_unnamed* pack = NULL;
     while (1)
     {
-        M_pack_unnamed* pack = M_ReadPack_Unnamed (pipe_rd);
+        pack = M_ReadPack_Unnamed (pipe_rd);
+
         if (pack == NULL)
             return -1;
 
         pr_info ("Getted message: %s" , pack->data_);
         if (strcmp (pack->data_ , "CLOSE_SERVER") == CMP_EQ)
-        {
-            M_DestroyPack_Unnamed (pack);
-            return -1;
-        }
+            EXIT1 (-1);
 
-        char* buf = write_into_bash (fd , pack , &pollfds);
+        char* buf = WriteIntoBash (fd , pack , &pollfds);
         if (buf == NULL)
-        {
-            M_DestroyPack_Unnamed (pack);
-            return -1;
-        }
+            EXIT1 (-1);
 
         M_DestroyPack_Unnamed (pack);
         pr_info ("SENDING: %s" , buf);
-        if (send_message_size (buf, big_buffer_size) == -1)
+        if (SendMessageSize (buf , big_buffer_size) == -1)
             return -1;
     }
 
-    return 0;
+exit1:
+    M_DestroyPack_Unnamed (pack);
+    return ret;
 }
 
-int print_first_com (int fd , struct pollfd* poll)
+int PrintFirstCommand (int fd , struct pollfd* poll)
 {
     M_pack_unnamed* pack = M_CreatePack_Unnamed ("\n" , 1);
     if (pack == NULL)
         return -1;
 
-    char* buf = write_into_bash (fd , pack , poll);
+    char* buf = WriteIntoBash (fd , pack , poll);
     if (buf == NULL)
         return -1;
 
@@ -268,49 +264,44 @@ int print_first_com (int fd , struct pollfd* poll)
     return 0;
 }
 
-static int do_cd (char* buffer);
-int check_buffer (char* buffer)
+static int MakeCD (char* buffer);
+int CheckBuffer (char* buffer)
 {
     pr_info ("Checking buffer: %s" , buffer);
 
-    int n_found = 1;
+    int ret = 0; //1 - not found, -1 - error
     switch (buffer[0])
     {
     case 'c':
         if (buffer[1] == 'd')
-        {
-            n_found = 0;
-            if (do_cd (buffer + 2) == -1)
-                return -1;
-        }
+            ret = MakeCD (buffer + 2);
+        else
+            ret = 1;
         break;
 
     case 'l':
         if (strcmp (buffer , "ls") == CMP_EQ)
-        {
-            n_found = 0;
-            if (do_ls () == -1)
-                return -1;
-        }
+            ret = MakeLs ();
+        else
+            ret = 1;
         break;
 
     case 'p':
-        n_found = strcmp (buffer , "print");
-        if (n_found == 0)
-            if (send_message (DUMMY_STR) == -1)
-                return -1;
+        if (strcmp (buffer , "print") == CMP_EQ)
+            ret = SendMessage (DUMMY_STR);
+        else
+            ret = 1;
         break;
     default:
-        break;
+        ret = 1;
     }
 
-    if (n_found)
-        if (send_message (NOT_FOUND_STR) == -1)
-            return -1;
+    if (ret == 1)
+        ret = SendMessage (NOT_FOUND_STR);
 
-    return 0;
+    return ret;
 }
-int do_cd (char* buffer)
+int MakeCD (char* buffer)
 {
     int err = 0;
 
@@ -319,41 +310,36 @@ int do_cd (char* buffer)
     else if (buffer[0] == '\0')
         err == chdir ("/");
     else
-        err = SOCK_ERR;
+        err = -1;
 
-    if (err == SOCK_ERR)
-    {
-        if (send_message ("Can't do this with directories!\n") == -1)
-            return -1;
-        return 0;
-    }
+    if (err == -1)
+        err = SendMessage ("Can't do this with directories!\n");
 
-    if (print_cur_dir () == -1)
-        return -1;
+    if (err != -1)
+        err = PrintCurDir ();
 
-    return 0;
+    return err;
 }
 
 
-int print_cur_dir ()
+int PrintCurDir ()
 {
     char buffer[64] = "DIRECTORY: ";
-    if (getcwd (buffer + 11, 51) == NULL)
-    {
-        if (send_message ("nothing...\n\0") == -1)
-            return -1;
-    }
+    int err = 0;
+
+    if (getcwd (buffer + 11 , 51) == NULL)
+        err = SendMessage ("nothing...\n\0");
     else
     {
         strcat (buffer , "\n\0");
-        if (send_message (buffer) == -1)
-            return -1;
+        err = SendMessage (buffer);
     }
-    return 0;
+
+    return err;
 }
 
 static int cat_strings (int pipes[2] , char* big , char* small , char* dir);
-int do_ls ()
+int MakeLs ()
 {
     pr_info ("Doing ls");
 
@@ -418,7 +404,7 @@ int cat_strings (int pipes[2] , char* big , char* small , char* dir)
         strcat (big , "\n");
         strcat (dir , "\0");
         strcat (big , dir);
-        if (send_message (big) == -1)
+        if (SendMessage (big) == -1)
             return -1;
     }
 
@@ -427,7 +413,7 @@ int cat_strings (int pipes[2] , char* big , char* small , char* dir)
     return 0;
 }
 
-int send_message (char* str)
+int SendMessage (char* str)
 {
     pr_info ("Sending message");
     size_t size = strlen (str);
@@ -443,7 +429,7 @@ int send_message (char* str)
     return 0;
 }
 
-int send_message_size (char* str, size_t size)
+int SendMessageSize (char* str , size_t size)
 {
     pr_info ("Sending message");
     M_pack_named* packet = M_CreatePack_Named_Mem (str , size , 0);
@@ -460,7 +446,7 @@ int send_message_size (char* str, size_t size)
 
 
 char big_buffer[64 * BUFSZ] = {};
-char* write_into_bash (int fd , M_pack_unnamed* pack , struct pollfd* pollfds)
+char* WriteIntoBash (int fd , M_pack_unnamed* pack , struct pollfd* pollfds)
 {
     memcpy (big_buffer , pack->data_ , pack->size_);
     big_buffer[pack->size_] = '\n';
@@ -492,6 +478,7 @@ char* write_into_bash (int fd , M_pack_unnamed* pack , struct pollfd* pollfds)
         bytes--;
     big_buffer[bytes] = ' ';
     big_buffer[bytes + 1] = '\0';
-    
+    big_buffer_size = bytes + 2;
+
     return big_buffer;
 }
