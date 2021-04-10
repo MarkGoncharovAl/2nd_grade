@@ -23,5 +23,5 @@ Possible ways:
 This information can be in the executeble file: use ```rpath```
 > gcc main.c -L. -lfact -Wl,-rpath,.
 ---------
-![PLT](images/PLT.png)
+![](images/PLT.png)
 PLT - Procedure Linkage Table
