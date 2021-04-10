@@ -78,17 +78,15 @@ Logging versions
 ----------------
 08.04
 > Start README. Current targets:
-> 1. Optimize return value handling in functions
-> 2. Logging into /var/log
-> 3. Killing server more accurate
-> 4. Rewrite CheckNewClient without switch and so on
-> 5. One function-name style must be used
-> 6. Rename functions: GetID, AddID and so on...
-> 7. Close file-descr before exec
+> 1. Optimize return value handling in functions + 
+> 2. Logging into /var/log +
+> 3. Killing server more accurate +
+> 4. Rewrite CheckNewClient without switch and so on +
+> 5. One function-name style must be used +
+> 6. Rename functions: GetID, AddID and so on... +
+> 7. Close file-descr before exec +
 > 8. Packet->data_ should be union for convient usage
 > 9. fgets can not be used in order to save from dup2
 > 10. Signal handling (can be used tcsetattr/cfmakeraw)
 > 11. Common usage for TCP and UDP
 
-09.04
-> Done: 1, 4

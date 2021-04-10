@@ -4,6 +4,7 @@
 #include "../ID/ID.h"
 
 static const char LOG_FILE [] = "/var/log/serverTCP.log";
+static char slave_directory[100] = {};
 static const int SIZE_CONNECTION = 20;
 
 static int init_daemon ();
@@ -86,8 +87,7 @@ int CreateNewClient (int client_sk , struct sockaddr_in* addr)
             return -1;
         }
 
-        if (execlp ("/home/mark/VS_prog/2nd_grade/C_4_Sockets/build/./server_slaveTCP.o" ,
-            "/home/mark/VS_prog/2nd_grade/C_4_Sockets/build/./server_slaveTCP.o" ,
+        if (execlp (slave_directory , slave_directory ,
             out_str[0] , out_str[1] , out_str[2] , out_str[3] , NULL) == EXEC_ERR)
         {
             pr_strerr ("Can't create server_slave!");
@@ -106,23 +106,16 @@ void CloseServer (int sk)
     UnSetLogFile ();
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 int init_daemon ()
 {
     pr_info ("Initializing daemon!");
+
+    char* cur_dir = get_current_dir_name ();
+    if (cur_dir == NULL)
+        return -1;
+    memcpy (slave_directory , cur_dir , strlen (cur_dir));
+    strcat (slave_directory , "/build/./server_slaveTCP.o\0");
+    free (cur_dir);
 
     pid_t pd = 0;
     if ((pd = fork ()) == -1)

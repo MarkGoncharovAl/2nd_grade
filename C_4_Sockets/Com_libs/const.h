@@ -10,8 +10,8 @@
 #define EXEC_ERR -1
 
 #define INET "127.0.0.1"
-#define PORT 23478
-#define PORT_TCP 23449
+#define PORT 23485
+#define PORT_TCP 23500
 #define CMP_EQ 0
 
 #define DUMMY_STR "London is the capital of Great Britain\n"

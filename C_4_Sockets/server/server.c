@@ -5,6 +5,7 @@
 
 #define NEW_CLIENT -1
 static const char LOG_FILE [] = "/var/log/server.log";
+static char slave_directory[100] = {};
 
 //return 0 if success
 int WriteMessage (int ID , M_pack_unnamed* pack);
@@ -98,21 +99,20 @@ char CreateNewClient (struct sockaddr_in* addr , int sk)
 
     int new_id = M_CreateID_FromFD (new_pipe[1]);
 
-    char out_str[5][16] = {};
-    if (sprintf (out_str[0] , "%d" , new_pipe[0]) <= 0
-     || sprintf (out_str[1] , "%d" , sk) <= 0
-     || sprintf (out_str[2] , "%d" , addr->sin_port) <= 0
-     || sprintf (out_str[3] , "%d" , addr->sin_addr.s_addr) <= 0
-     || sprintf (out_str[4] , "%d" , new_id) <= 0)
-    {
-        pr_err ("Can't create strings for slaves!");
-        return -1;
-    }
-
     if (fork () == 0)
     {//child
-        if (execlp ("/home/mark/VS_prog/2nd_grade/C_4_Sockets/build/./server_slave.o" ,
-            "/home/mark/VS_prog/2nd_grade/C_4_Sockets/build/./server_slave.o" ,
+        char out_str[5][16] = {};
+        if (sprintf (out_str[0] , "%d" , new_pipe[0]) <= 0
+         || sprintf (out_str[1] , "%d" , sk) <= 0
+         || sprintf (out_str[2] , "%d" , addr->sin_port) <= 0
+         || sprintf (out_str[3] , "%d" , addr->sin_addr.s_addr) <= 0
+         || sprintf (out_str[4] , "%d" , new_id) <= 0)
+        {
+            pr_err ("Can't create strings for slaves!");
+            return -1;
+        }
+
+        if (execlp (slave_directory , slave_directory ,
             out_str[0] , out_str[1] , out_str[2] , out_str[3] , out_str[4] , NULL) == EXEC_ERR)
         {
             pr_err ("Can't create server_slave!");
@@ -120,7 +120,7 @@ char CreateNewClient (struct sockaddr_in* addr , int sk)
         }
     }
 
-    pr_info ("Created new client: %s" , out_str[4]);
+    pr_info ("Created new client");
     return 0;
 }
 
@@ -157,7 +157,7 @@ int WriteMessage (int ID , M_pack_unnamed* pack)
 
 void Close (int socket)
 {
-    M_Close_IDS (socket);
+    M_Close_IDS ();
     close (socket);
 
     pr_info ("Unlinked!");
@@ -167,6 +167,14 @@ void Close (int socket)
 int InitDaemon ()
 {
     pr_info ("Initializing daemon!");
+
+    char* cur_dir = get_current_dir_name ();
+    if (cur_dir == NULL)
+        return -1;
+    memcpy (slave_directory , cur_dir , strlen (cur_dir));
+    strcat (slave_directory , "/build/./server_slave.o\0");
+    free (cur_dir);
+    //pr_info ("Slave is in %s", slave_directory);
 
     pid_t pd = 0;
 

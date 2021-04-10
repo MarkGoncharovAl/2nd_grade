@@ -5,8 +5,9 @@ LOG=build/COM_LIBS_LOG.o
 FAST_USE=build/COM_LIBS_USE.o
 PACK=build/PACKET.o
 ID=build/ID.o
+CRYPTO=build/crypto.o
 
-COM_LIBS_O=$(LOG) $(FAST_USE) $(PACK) $(ID)
+COM_LIBS_O=$(LOG) $(FAST_USE) $(PACK) $(ID) $(CRYPTO)
 
 all: server_compile server_slave_compile client_compile server_compileTCP server_slave_compileTCP client_compileTCP
 	@echo "Files were compiled!"
@@ -44,7 +45,9 @@ COM_LIBS_LOG:
 	@$(CC) $(CFLAGS) -c Com_libs/log.c -o $(LOG)
 COM_LIBS_USE:
 	@$(CC) $(CFLAGS) -c Com_libs/fast_use.c -o $(FAST_USE)
-COM_LIBS_PACKET: COM_LIBS_LOG
+COM_LIBS_CRYPTO: COM_LIBS_LOG
+	@$(CC) $(CFLAGS) -c crypto/crypto.c -o $(CRYPTO)
+COM_LIBS_PACKET: COM_LIBS_LOG COM_LIBS_CRYPTO
 	@$(CC) $(CFLAGS) -c packet/packet.c -o $(PACK)
 COM_LIBS_ID: COM_LIBS_LOG COM_LIBS_PACKET
 	@$(CC) $(CFLAGS) -c ID/ID.c -o $(ID)

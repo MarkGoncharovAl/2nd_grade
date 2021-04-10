@@ -192,6 +192,8 @@ M_pack_unnamed* M_ReadPack_Unnamed (int fd)
         return NULL;
     }
 
+    M_DecryptString (out->data_ , out->size_);
+
 #ifdef MAX_INFO
     pr_info ("Successfully readed: %s in %d bytes" , out->data_ , out->size_);
 #endif
@@ -215,6 +217,7 @@ int M_WritePack_Unnamed (int fd , M_pack_unnamed* pack)
         return -1;
     }
 
+    M_EncryptString (pack->data_ , pack->size_);
     if (write (fd , pack->data_ , pack->size_) == WRITE_ERR)
     {
         pr_strerr ("Can't properly write buffer %s in %d bytes" , pack->data_ , pack->size_);
@@ -256,7 +259,7 @@ M_pack_named* M_ReadPack_Named (int fd , struct sockaddr* addr)
     out->data_ = (char*)malloc (out->size_ * sizeof (char));
     if (out->data_ == NULL)
     {
-        pr_strerr ("Can't get dynamic memory for info in pack: size: %u from socket %d!", out->size_, out->ID_);
+        pr_strerr ("Can't get dynamic memory for info in pack: size: %u from socket %d!" , out->size_ , out->ID_);
         free (out);
         return NULL;
     }
@@ -266,9 +269,11 @@ M_pack_named* M_ReadPack_Named (int fd , struct sockaddr* addr)
         M_DestroyPack_Named (out);
         return NULL;
     }
+    M_DecryptString (out->data_ , out->size_);
+
 
 #ifdef MAX_INFO
-    pr_info ("Received:\n\t%s\n\tIn %u bytes from %d" , out->data_ , out->size_, out->ID_);
+    pr_info ("Received:\n\t%s\n\tIn %u bytes from %d" , out->data_ , out->size_ , out->ID_);
 #endif
     return out;
 }
@@ -285,6 +290,7 @@ int M_WritePack_Named (int fd , struct sockaddr* addr , M_pack_named* pack)
     pr_info ("Writting:\n\t%s\n\t%u bytes to %d socket" , pack->data_ , pack->size_ , fd);
 #endif
 
+
     socklen_t sock_len = sizeof (struct sockaddr_in);
     if (sendto (fd , &(pack->ID_) , sizeof (pack->ID_) , 0 , addr , sock_len) == SOCK_ERR)
     {
@@ -298,6 +304,7 @@ int M_WritePack_Named (int fd , struct sockaddr* addr , M_pack_named* pack)
         return -1;
     }
 
+    M_EncryptString (pack->data_ , pack->size_);
     if (sendto (fd , pack->data_ , pack->size_ * sizeof (char) , 0 , addr , sock_len) == SOCK_ERR)
     {
         pr_strerr ("Can't properly write buffer %s" , pack->data_);

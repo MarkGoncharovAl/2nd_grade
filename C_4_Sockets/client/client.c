@@ -90,9 +90,9 @@ int StartClient (int sk , struct sockaddr* send , struct sockaddr* recv , int id
 
         free (pack);
 
-        if (strcmp (getstr , "exit") == 0)
+        if (strncmp (getstr , "exit", 4) == 0)
             return 0;
-        if (strcmp (getstr , "CLOSE_SERVER") == 0)
+        if (strncmp (getstr , "CLOSE_SERVER", sizeof ("CLOSE_SERVER") - 1) == 0)
             return 0;
 
         M_pack_named* packet = M_ReadPack_Named (sk , recv);
