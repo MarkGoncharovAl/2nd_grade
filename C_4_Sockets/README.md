@@ -65,14 +65,14 @@ Current version
 | 3    | 100% | Done                              |
 | 4    | 100% | Done                              |
 | 5    | 100% | Done                              |
-| 6    | 90%  | Returning values can be optimized |
+| 6    | 100% | Done                              |
 | 7    | 100% | Done                              |
 | 8    | 0%   | Not started                       |
 | 9    | 100% | Done                              |
-| 10   | 20%  | Linking -c for libs               |
-| 11   | 0%   | Soon                              |
+| 10   | 100% | Done                              |
+| 11   | 100% | Done (RSA)                        |
 | 12   | 0%   | Tests weren't prepared            |
-| 13   | 50%  | Client is reaining                |
+| 13   | 50%  | Client is safe in signals         |
 
 Logging versions
 ----------------
