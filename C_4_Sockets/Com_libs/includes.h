@@ -19,9 +19,11 @@
 
 #include "fcntl.h"
 #include <errno.h>
+#include <termios.h>
 #include <unistd.h>
 #include <signal.h>
 #include <poll.h>
+#include <linux/limits.h>
 
 #include "log.h"
 #include "fast_use.h"

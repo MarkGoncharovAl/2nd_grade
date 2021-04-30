@@ -2,10 +2,10 @@
 #include "../Com_libs/const.h"
 #include "../packet/packet.h"
 #include "../ID/ID.h"
+#include "server_union.h"
 
 #define NEW_CLIENT -1
-static const char LOG_FILE [] = "/var/log/server.log";
-static char slave_directory[100] = {};
+static const char LOG_FILE [] = "/var/log/SERVER/server.log";
 
 //return 0 if success
 int WriteMessage (int ID , M_pack_unnamed* pack);
@@ -17,7 +17,7 @@ int StartServer (int sk , struct sockaddr_in* name , struct sockaddr* name_);
 // 1 - New client
 char CreateNewClient (struct sockaddr_in* addr , int sk);
 
-void Close (int socket);
+void CloseAll (int socket);
 
 int main ()
 {
@@ -46,7 +46,7 @@ int main ()
     StartServer (sk , &name , name_);
 
     pr_info ("Exit programm");
-    Close (sk);
+    CloseAll (sk);
     return 0;
 }
 
@@ -101,23 +101,12 @@ char CreateNewClient (struct sockaddr_in* addr , int sk)
 
     if (fork () == 0)
     {//child
-        char out_str[5][16] = {};
-        if (sprintf (out_str[0] , "%d" , new_pipe[0]) <= 0
-         || sprintf (out_str[1] , "%d" , sk) <= 0
-         || sprintf (out_str[2] , "%d" , addr->sin_port) <= 0
-         || sprintf (out_str[3] , "%d" , addr->sin_addr.s_addr) <= 0
-         || sprintf (out_str[4] , "%d" , new_id) <= 0)
-        {
-            pr_err ("Can't create strings for slaves!");
-            return -1;
-        }
-
-        if (execlp (slave_directory , slave_directory ,
-            out_str[0] , out_str[1] , out_str[2] , out_str[3] , out_str[4] , NULL) == EXEC_ERR)
-        {
-            pr_err ("Can't create server_slave!");
-            return -1;
-        }
+        //!Changed: exec -> function call
+        close(new_pipe[1]);
+        pr_info("Slave %d has to be started!", new_id);
+        StartServerSlave(new_pipe[0], sk, addr->sin_port, addr->sin_addr.s_addr, new_id);
+        pr_info("Slave %d has to be dead", new_id);
+        raise(SIGKILL);
     }
 
     pr_info ("Created new client");
@@ -155,7 +144,7 @@ int WriteMessage (int ID , M_pack_unnamed* pack)
     return 0;
 }
 
-void Close (int socket)
+void CloseAll (int socket)
 {
     M_Close_IDS ();
     close (socket);
@@ -167,15 +156,6 @@ void Close (int socket)
 int InitDaemon ()
 {
     pr_info ("Initializing daemon!");
-
-    char* cur_dir = get_current_dir_name ();
-    if (cur_dir == NULL)
-        return -1;
-    memcpy (slave_directory , cur_dir , strlen (cur_dir));
-    strcat (slave_directory , "/build/./server_slave.o\0");
-    free (cur_dir);
-    //pr_info ("Slave is in %s", slave_directory);
-
     pid_t pd = 0;
 
     if ((pd = fork ()) == -1)

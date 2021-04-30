@@ -4,12 +4,13 @@
 
 static int SetLogFileID ();
 static int StartClient (int sk , struct sockaddr* send);
+static int SetSignalHandle ();
 
 #define LOGGING_FILE "/var/log/clientTCP.log"
 
 int main ()
 {
-    if (SetLogFileID () == -1)
+    if (SetLogFileID () == -1 && SetSignalHandle())
         return -1;
     pr_info ("Logging is starting");
 
@@ -92,5 +93,16 @@ int SetLogFileID ()
         return -1;
 
     pr_info ("Log file was sucesfully set");
+    return 0;
+}
+
+int SetSignalHandle ()
+{
+    struct termios oldt;
+    tcgetattr(STDIN_FILENO, &oldt);
+    struct termios newt = oldt;
+    newt.c_lflag &= ~ICANON;
+    newt.c_lflag &= ~ISIG;
+    tcsetattr(STDIN_FILENO, TCSANOW , &newt);
     return 0;
 }

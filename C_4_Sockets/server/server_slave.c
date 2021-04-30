@@ -1,13 +1,14 @@
 #include "../Com_libs/includes.h"
 #include "../Com_libs/const.h"
 #include "../packet/packet.h"
+#include "server_union.h"
 
 #define NOT_FOUND_STR "There is no such command!\n"
 #define SMALL_BUFF 64
 #define wait_ms 1000
 
-static int CheckArgs (int argc , char* argv []);
 static int StartSlave ();
+static int Start (int addr , int id);
 
 static int CreateBash ();
 static int GetResFd (int fd , struct termios* flags);
@@ -22,7 +23,7 @@ static int MakeLs ();
 //dynamic output
 static char* WriteIntoBash (int fd , M_pack_unnamed* pack , struct pollfd* pollfds);
 
-static int SetLogFileID (char* ID);
+static int SetLogFileID (int ID);
 
 static int pipe_rd = 0;
 static int my_socket = 0;
@@ -30,24 +31,32 @@ static int port = 0;
 static struct sockaddr* name = NULL;
 static int big_buffer_size = 0;
 
-/* argv:
-[1] - pipe_reading
-[2] - socket sending
-[3] - sin_port
-[4] - sin_addr
-[5] - ID
-*/
 
-int main (int argc , char* argv [])
+int StartServerSlave (int pipe_read , int sk , int ports , int addr , int id)
 {
-    if (CheckArgs (argc , argv) == -1)
-        return -1;
+    pipe_rd = pipe_read;
+    my_socket = sk;
+    port = ports;
 
-    struct in_addr addr = { atoi (argv[4]) };
+    int ret = Start (addr , id);
+    close (sk);
+    return ret;
+}
+
+int Start (int num_addr , int id)
+{
+    struct in_addr addr = { num_addr };
     struct sockaddr_in sock_addr = { AF_INET, port, addr, 0 };
     name = (struct sockaddr*)(&sock_addr);
+    pr_info ("Started slaving");
 
-    if (SendMessage (argv[5]) == -1) //ID CLIENT
+    char buf_id[5] = {};
+    if (sprintf (buf_id , "%d" , id) == -1)
+    {
+        pr_strerr ("Sprintf wasn't successful");
+        return -1;
+    }
+    if (SendMessage (buf_id) == -1) //ID CLIENT
         return -1;
 
     pr_info ("Server slave was initialized");
@@ -55,25 +64,6 @@ int main (int argc , char* argv [])
 
     pr_info ("Exit programm server_slave");
     close (pipe_rd);
-    return 0;
-}
-
-int CheckArgs (int argc , char* argv [])
-{
-    if (SetLogFileID (argv[5]) == -1)
-        return -1;
-
-    pr_info ("Starting logging!");
-
-    if (argc != 6)
-    {
-        pr_err ("Not enough parameters: %d. Must be 6" , argc);
-        return -1;
-    }
-
-    pipe_rd = atoi (argv[1]);
-    my_socket = atoi (argv[2]);
-    port = atoi (argv[3]);
     return 0;
 }
 
@@ -106,12 +96,12 @@ exit1:
     return ret;
 }
 
-int SetLogFileID (char* ID)
+int SetLogFileID (int ID)
 {
-    char buf[100] = {};
-    if (sprintf (buf , "/var/log/slave%s.log" , ID) == -1)
+    char buf[PATH_MAX] = {};
+    if (sprintf (buf , "/var/log/SERVER/slave%d.log" , ID) == -1)
     {
-        pr_strerr ("Can't create name of log file slave%s" , ID);
+        pr_strerr ("Can't create name of log file slave%d" , ID);
         return -1;
     }
 
@@ -327,28 +317,26 @@ int MakeCD (char* buffer)
 int PrintCurDir ()
 {
     char buffer[64] = "DIRECTORY: ";
-    int err = 0;
+    const size_t size_buffer = sizeof ("DIRECTORY: ");
 
-    if (getcwd (buffer + 11 , 51) == NULL)
-        err = SendMessage ("nothing...\n\0");
-    else
-    {
-        strcat (buffer , "\n\0");
-        err = SendMessage (buffer);
-    }
+    if (getcwd (buffer + size_buffer , size_buffer) == NULL)
+        return SendMessage ("nothing...\n\0");
 
-    return err;
+    //else
+    strcat (buffer , "\n\0");
+    return SendMessage (buffer);
 }
 
 static int CatStrings (int pipes[2] , char* big , char* small , char* dir);
+#define PIPE_BUFFER_SIZE (2 * PATH_MAX - 100)
 int MakeLs ()
 {
     pr_info ("Doing ls");
 
-    char Dir_buffer[1024] = "DIRECTORY: ";
-    char buffer1[64] = {};
+    char Dir_buffer[PATH_MAX * 2] = "DIRECTORY: ";
+    char buffer1[PATH_MAX] = {};
 
-    if (getcwd (buffer1 , 64) == NULL)
+    if (getcwd (buffer1 , PATH_MAX) == NULL)
     {
         pr_strerr ("Can't define buffer for directory!\n");
         return -1;
@@ -378,9 +366,9 @@ int MakeLs ()
     }
 
     waitpid (pd , NULL , 0);
-    char buffer[924] = {};
+    char pipe_buffer[PIPE_BUFFER_SIZE] = {};
 
-    if (CatStrings (new_pipe , Dir_buffer , buffer1 , buffer) == -1)
+    if (CatStrings (new_pipe , Dir_buffer , buffer1 , pipe_buffer) == -1)
         return -1;
 
     pr_info ("Ls was done");
@@ -395,7 +383,7 @@ int CatStrings (int pipes[2] , char* big , char* small , char* dir)
         return -1;
     }
 
-    if (read (pipes[0] , dir , 924) == READ_ERR)
+    if (read (pipes[0] , dir , PIPE_BUFFER_SIZE) == READ_ERR)
     {
         pr_strerr ("Can't read from pipe %d" , pipes[1]);
         return -1;
@@ -447,12 +435,18 @@ int SendMessageSize (char* str , size_t size)
 }
 
 
-char big_buffer[64 * BUFSZ] = {};
+static char big_buffer[64 * BUFSZ] = {};
+
+//returns count of readed bytes
+static int CheckPoll (int fd , struct pollfd* pollfds);
+
 char* WriteIntoBash (int fd , M_pack_unnamed* pack , struct pollfd* pollfds)
 {
+    pr_info ("Writting %s in %d bytes into big_buffer" , pack->data_ , pack->size_);
     memcpy (big_buffer , pack->data_ , pack->size_);
     big_buffer[pack->size_] = '\n';
     big_buffer[pack->size_ + 1] = '\0';
+    pr_info ("Big_buffer: %s" , big_buffer);
 
     if (write (fd , big_buffer , pack->size_ + 2) == WRITE_ERR)
     {
@@ -460,21 +454,9 @@ char* WriteIntoBash (int fd , M_pack_unnamed* pack , struct pollfd* pollfds)
         return NULL;
     }
 
-    int bytes = 0;
-    while (poll (pollfds , 1 , wait_ms) != 0)
-    {
-        if (pollfds->revents == POLLIN)
-        {
-            int added = read (fd , big_buffer + bytes , sizeof (big_buffer) - bytes);
-            if (added == -1)
-            {
-                pr_strerr ("read was unproperly ended!");
-                return NULL;
-            }
-
-            bytes += added;
-        }
-    }
+    int bytes = CheckPoll (fd , pollfds);
+    if (bytes == -1)
+        return NULL;
 
     while (bytes > 0 && big_buffer[bytes - 1] != '#')
         bytes--;
@@ -483,4 +465,34 @@ char* WriteIntoBash (int fd , M_pack_unnamed* pack , struct pollfd* pollfds)
     big_buffer_size = bytes + 2;
 
     return big_buffer;
+}
+
+int CheckPoll (int fd , struct pollfd* pollfds)
+{
+    int bytes = 0;
+    int added = 0;
+
+    while (poll (pollfds , 1 , wait_ms) != 0)
+    {
+        switch (pollfds->revents)
+        {
+        case POLLIN:
+            added = read (fd , big_buffer + bytes , sizeof (big_buffer) - bytes);
+            if (added == -1)
+            {
+                pr_strerr ("read was unproperly ended!");
+                return -1;
+            }
+            bytes += added;
+            break;
+
+        case POLLERR:
+            pr_strerr ("Poll ended with POLLERR!");
+            return -1;
+        case POLLHUP:
+            pr_strerr ("Poll ended with POLLHUP!");
+            return -1;
+        }
+    }
+    return bytes;
 }

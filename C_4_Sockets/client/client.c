@@ -7,16 +7,17 @@ static int GetIDFromServer (int sk , struct sockaddr* addr1 , struct sockaddr* a
 static int SetLogFileID (int ID);
 static int SetTempLog ();
 static int StartClient (int sk , struct sockaddr* send , struct sockaddr* recv , int id);
+static int SetSignalHandle ();
 
 int main (int argc , char* argv [])
 {
-    if (SetTempLog () == -1)
+    if (SetTempLog () == -1 || SetSignalHandle () == -1)
         return 1;
 
     pr_info ("Logging is starting");
 
     struct in_addr in_ad = { CheckArgc (argc, argv[1]) };
-    
+
     int sk = socket (AF_INET , SOCK_DGRAM , 0);
     if (sk == SOCK_ERR)
     {
@@ -90,9 +91,9 @@ int StartClient (int sk , struct sockaddr* send , struct sockaddr* recv , int id
 
         free (pack);
 
-        if (strncmp (getstr , "exit", 4) == 0)
+        if (strncmp (getstr , "exit" , 4) == 0)
             return 0;
-        if (strncmp (getstr , "CLOSE_SERVER", sizeof ("CLOSE_SERVER") - 1) == 0)
+        if (strncmp (getstr , "CLOSE_SERVER" , sizeof ("CLOSE_SERVER") - 1) == 0)
             return 0;
 
         M_pack_named* packet = M_ReadPack_Named (sk , recv);
@@ -161,7 +162,7 @@ int SetLogFileID (int ID)
     pr_info ("Setting log file to %d" , ID);
 
     char buf[30] = {};
-    sprintf (buf , "/var/log/client%d.log" , ID);
+    sprintf (buf , "/var/log/SERVER/client%d.log" , ID);
 
     int logfd = FastOpen (buf);
     if (logfd == -1)
@@ -184,5 +185,16 @@ int SetTempLog ()
     if (SetLogFile (logfd))
         return -1;
 
+    return 0;
+}
+
+int SetSignalHandle ()
+{
+    struct termios oldt;
+    tcgetattr(STDIN_FILENO, &oldt);
+    struct termios newt = oldt;
+    newt.c_lflag &= ~ICANON; //turnoff canon setting
+    newt.c_lflag &= ~ISIG; //INTR, QUIT, SUSP, or DSUSP are disabled
+    tcsetattr(STDIN_FILENO, TCSANOW /*setting are turning on now*/, &newt);
     return 0;
 }

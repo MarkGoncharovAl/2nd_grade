@@ -4,5 +4,5 @@ unsigned fact(unsigned);
 
 int main()
 {
-    printf("%u", fact(10));
+    printf("%u", fact(3));
 }

@@ -223,6 +223,7 @@ int M_WritePack_Unnamed (int fd , M_pack_unnamed* pack)
         pr_strerr ("Can't properly write buffer %s in %d bytes" , pack->data_ , pack->size_);
         return -1;
     }
+    M_DecryptString (pack->data_ , pack->size_);
 
 #ifdef MAX_INFO
     pr_info ("Successfully writted");
@@ -310,6 +311,7 @@ int M_WritePack_Named (int fd , struct sockaddr* addr , M_pack_named* pack)
         pr_strerr ("Can't properly write buffer %s" , pack->data_);
         return -1;
     }
+    M_DecryptString (pack->data_ , pack->size_);
 
 #ifdef MAX_INFO
     pr_info ("Pack\n\t%s\n\tWas successfully sent" , pack->data_);
